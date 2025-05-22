@@ -1,0 +1,14 @@
+{
+    "sources": [
+        {
+            "name": "MacroMargin Twitter",
+            "url": "https://rsshub.app/twitter/user/_RSSHub",
+            "description": "MacroMargin的Twitter动态"
+        },
+        {
+            "name": "MacroMargin Twitter",
+            "url": "https://rsshub.app/twitter/user/MacroMargin",
+            "description": "MacroMargin的Twitter动态"
+        }
+    ]
+} 
