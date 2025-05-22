@@ -23,7 +23,7 @@ you can also install uv by pip
 pipx install uv # 或 pip install uv
 ```
 
-for macos, homebrew is recommanded
+for MacOS, installed by homebrew is recommanded
 
 ```sh
 brew install uv
