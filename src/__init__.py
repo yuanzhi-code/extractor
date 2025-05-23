@@ -1,3 +1,1 @@
-"""
-src package
-""" 
+from .rss import *

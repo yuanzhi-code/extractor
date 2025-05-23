@@ -4,7 +4,6 @@ from typing import List, Dict, Optional
 import html
 from requests.exceptions import RequestException
 import os
-import models
 import requests
 
 class RssReader:
@@ -68,13 +67,12 @@ class RssReader:
         """
         if not self.feed:
             return {}
-
         return {
-            'title': html.unescape(self.feed.feed.get('title', '')),
-            'description': html.unescape(self.feed.feed.get('description', '')),
-            'link': self.feed.feed.get('link', ''),
-            'language': self.feed.feed.get('language', ''),
-            'updated': self.feed.feed.get('updated', '')
+            'title': html.unescape(self.feed.get('title', '')),
+            'description': html.unescape(self.feed.get('description', '')),
+            'link': self.feed.get('link', ''),
+            'language': self.feed.get('language', ''),
+            'updated': self.feed.get('updated', '')
         }
 
     def get_entries(self, limit: Optional[int] = None) -> List[Dict]:
@@ -131,7 +129,7 @@ def main():
     from requests.exceptions import RequestException
 
     # 设置代理
-    proxy = "http://127.0.0.1:7897"  # 根据您的实际代理地址修改
+    proxy = "http://127.0.0.1:7890"  # 根据您的实际代理地址修改
 
     # 读取RSS源配置
     try:

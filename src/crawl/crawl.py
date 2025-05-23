@@ -6,7 +6,7 @@ async def main():
         result = await crawler.arun(
             url="https://www.nbcnews.com/business",
         )
-        print(result.markdown)
+        print(result)
 
 if __name__ == "__main__":
     asyncio.run(main())
