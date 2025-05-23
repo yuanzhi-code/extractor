@@ -196,5 +196,4 @@ def main():
         time.sleep(2)
         
 if __name__ == "__main__":
-    # main()
-    print(Browse(url="https://www.zengzhang.ai/p/ep08-airaas", query="main content"))
+    main()
