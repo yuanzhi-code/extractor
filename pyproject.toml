@@ -15,6 +15,7 @@ dependencies = [
     "bs4==0.0.2",
     "certifi==2025.4.26",
     "charset-normalizer==3.4.2",
+    "crawl4ai>=0.6.3",
     "dataclasses-json==0.6.7",
     "distro==1.9.0",
     "feedparser==6.0.11",
