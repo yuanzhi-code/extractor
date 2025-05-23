@@ -1,14 +1,9 @@
 {
     "sources": [
         {
-            "name": "MacroMargin Twitter",
-            "url": "https://rsshub.app/twitter/user/_RSSHub",
-            "description": "MacroMargin的Twitter动态"
-        },
-        {
-            "name": "MacroMargin Twitter",
-            "url": "https://rsshub.app/twitter/user/MacroMargin",
-            "description": "MacroMargin的Twitter动态"
+            "name": "op7418 Twitter",
+            "url": "https://www.zengzhang.ai/feed",
+            "description": "op7418的Twitter动态"
         }
     ]
 } 

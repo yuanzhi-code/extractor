@@ -176,7 +176,7 @@ def main():
                         print(f"链接: {entry['link']}")
                         print(f"发布时间: {entry['published']}")
                         print(f"作者: {entry['author']}")
-                        print(f"摘要: {entry['summary'][:200]}...")  # 只显示前200个字符
+                        print(f"摘要: {entry['summary']}")
                     break  # 成功获取数据，跳出重试循环
                 else:
                     print(f"解析RSS源失败 (尝试 {attempt + 1}/{max_retries})")
@@ -196,4 +196,5 @@ def main():
         time.sleep(2)
         
 if __name__ == "__main__":
-    main()
+    # main()
+    print(Browse(url="https://www.zengzhang.ai/p/ep08-airaas", query="main content"))
