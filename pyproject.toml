@@ -39,6 +39,7 @@ dependencies = [
     "langgraph-prebuilt==0.1.8",
     "langgraph-sdk==0.1.70",
     "langsmith==0.3.42",
+    "litellm>=1.70.4",
     "marshmallow==3.26.1",
     "multidict==6.4.4",
     "mypy-extensions==1.1.0",
