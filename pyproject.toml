@@ -15,6 +15,7 @@ dependencies = [
     "bs4==0.0.2",
     "certifi==2025.4.26",
     "charset-normalizer==3.4.2",
+    "crawl4ai>=0.6.3",
     "dataclasses-json==0.6.7",
     "distro==1.9.0",
     "feedparser==6.0.11",
@@ -51,6 +52,8 @@ dependencies = [
     "pydantic==2.11.4",
     "pydantic-core==2.33.2",
     "pydantic-settings==2.9.1",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
     "python-dotenv==1.1.0",
     "pyyaml==6.0.2",
     "regex==2024.11.6",
@@ -76,3 +79,9 @@ dependencies = [
 name = "tsinghua"
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = true
+
+[tool.pytest.ini_options]
+pythonpath = [
+    "."
+]
+asyncio_mode = "strict"

@@ -134,7 +134,7 @@ def main():
     
     # 读取RSS源配置
     try:
-        with open('rss_sources.json', 'r', encoding='utf-8') as f:
+        with open('data/rss_sources.json', 'r', encoding='utf-8') as f:
             config = json.load(f)
     except Exception as e:
         print(f"读取配置文件失败: {str(e)}")
