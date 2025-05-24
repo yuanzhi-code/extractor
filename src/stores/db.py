@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 
 # 设置数据库 URI
-DATABASE_URI = 'sqlite:///extractor.db'
+DATABASE_URI = "sqlite:///extractor.db"
 
 # 创建数据库引擎
 engine = create_engine(DATABASE_URI, echo=True, pool_size=10)

@@ -1,5 +1,6 @@
 import asyncio
-from crawl4ai import *
+from crawl4ai import AsyncWebCrawler
+
 
 async def main():
     async with AsyncWebCrawler() as crawler:
@@ -7,6 +8,7 @@ async def main():
             url="https://www.nbcnews.com/business",
         )
         print(result)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
