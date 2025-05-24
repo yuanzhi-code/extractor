@@ -1,4 +1,5 @@
 # 使用文件轮转的轻量化日志方案
+```python
 import os
 from datetime import datetime
 from pathlib import Path
@@ -50,3 +51,4 @@ class RotatingLogger:
     
     def error(self, message, **kwargs):
         self.log("ERROR", message, **kwargs)
+```
