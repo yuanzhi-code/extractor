@@ -2,7 +2,7 @@
     "sources": [
         {
             "name": "op7418 Twitter",
-            "url": "https://www.zengzhang.ai/feed",
+            "url": "https://huggingface.co/blog/feed.xml",
             "description": "op7418的Twitter动态"
         }
     ]

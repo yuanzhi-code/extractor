@@ -14,9 +14,9 @@ class RssReader:
         Args:
             proxy: 代理服务器地址，格式如 'http://127.0.0.1:7890'
         """
-        self.feed = None
-        self.entries = []
-        self.proxy = proxy
+        self.feed : Optional[Dict] = None
+        self.entries : List[Dict] = []
+        self.proxy : Optional[str] = proxy
 
         # 设置代理
         if proxy:
@@ -57,7 +57,7 @@ class RssReader:
             print(f"解析RSS源时发生错误: {str(e)}")
             return False
 
-    def get_feed_info(self) -> Dict:
+    def get_feed_info(self) -> Dict[str, str]:
         """
         获取RSS源的基本信息
 
@@ -67,11 +67,11 @@ class RssReader:
         if not self.feed:
             return {}
         return {
-            'title': html.unescape(self.feed.get('title', '')),
-            'description': html.unescape(self.feed.get('description', '')),
-            'link': self.feed.get('link', ''),
-            'language': self.feed.get('language', ''),
-            'updated': self.feed.get('updated', '')
+            'title': html.unescape(self.feed.feed.get('title', '')),
+            'description': html.unescape(self.feed.feed.get('description', '')),
+            'link': self.feed.feed.get('link', ''),
+            'language': self.feed.feed.get('language', ''),
+            'updated': self.feed.feed.get('updated', '')
         }
 
     def get_entries(self, limit: Optional[int] = None) -> List[Dict]:
