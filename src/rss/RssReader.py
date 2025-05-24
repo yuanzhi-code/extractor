@@ -23,7 +23,6 @@ class RssReader:
             os.environ['http_proxy'] = proxy
             os.environ['https_proxy'] = proxy
             # 设置feedparser的代理
-            feedparser.PREFERRED_XML_PARSERS = ['lxml']
             feedparser.USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 
     def parse_feed(self, url: str) -> bool:
@@ -101,25 +100,36 @@ class RssReader:
 
         return entries
 
-    def get_latest_entry(self) -> Optional[Dict]:
+    def get_entries_by_date(self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> List[Dict]:
         """
-        获取最新的RSS条目
+        根据时间范围获取RSS条目列表
+
+        Args:
+            start_date: 可选，起始日期时间
+            end_date: 可选，结束日期时间
 
         Returns:
-            Optional[Dict]: 最新的RSS条目，如果没有条目则返回None
+            List[Dict]: 符合时间范围的RSS条目列表
         """
         if not self.entries:
-            return None
+            return []
 
-        latest = self.entries[0]
-        return {
-            'title': html.unescape(latest.get('title', '')),
-            'link': latest.get('link', ''),
-            'published': latest.get('published', ''),
-            'summary': html.unescape(latest.get('summary', '')),
-            'author': html.unescape(latest.get('author', ''))
-        }
+        filtered_entries = []
+        for entry in self.entries:
+            published = entry.get('published_parsed')
+            if published:
+                published_datetime = datetime(*published[:6])
+                if (start_date is None or published_datetime >= start_date) and (end_date is None or published_datetime <= end_date):
+                    entry_dict = {
+                        'title': html.unescape(entry.get('title', '')),
+                        'link': entry.get('link', ''),
+                        'published': entry.get('published', ''),
+                        'summary': html.unescape(entry.get('summary', '')),
+                        'author': html.unescape(entry.get('author', ''))
+                    }
+                    filtered_entries.append(entry_dict)
 
+        return filtered_entries
 def main():
     """
     测试RSS阅读器功能
@@ -127,9 +137,10 @@ def main():
     import json
     import time
     from requests.exceptions import RequestException
+    from datetime import datetime, timedelta
 
     # 设置代理
-    proxy = "http://127.0.0.1:7890"  # 根据您的实际代理地址修改
+    proxy = "http://127.0.0.1:7897"  # 根据您的实际代理地址修改
 
     # 读取RSS源配置
     try:
@@ -166,9 +177,15 @@ def main():
                     print(f"最后更新: {feed_info['updated']}")
                     print("-" * 50)
 
-                    # 获取最新的3条条目
-                    print("最新3条条目:")
-                    entries = reader.get_entries(limit=3)
+                    # 获取本月的起始日期和结束日期
+                    today = datetime.today()
+                    start_date = datetime(today.year, today.month, 1)
+                    end_date = datetime(today.year, today.month, 1) + timedelta(days=31)
+                    end_date = end_date.replace(day=1) - timedelta(days=1)
+
+                    # 获取本月的RSS条目
+                    print(f"本月的RSS条目 ({start_date.strftime('%Y-%m-%d')} 至 {end_date.strftime('%Y-%m-%d')}):")
+                    entries = reader.get_entries_by_date(start_date=start_date, end_date=end_date)
                     for i, entry in enumerate(entries, 1):
                         print(f"\n条目 {i}:")
                         print(f"标题: {entry['title']}")
