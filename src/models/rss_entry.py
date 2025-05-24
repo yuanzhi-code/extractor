@@ -49,7 +49,7 @@ class RssEntry(Base):
     )
     __table_args__ = (
         UniqueConstraint(
-            "source_type", "source_url", name="unique_source_type_source_url"
+            "source_url", name="unique_source_type_source_url"
         ),
         Index("idx_tb_rss_feeds_status", "status"),
         Index("idx_tb_rss_feeds_published_at", "published_at"),
