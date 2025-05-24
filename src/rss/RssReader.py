@@ -5,6 +5,10 @@ import html
 from requests.exceptions import RequestException
 import os
 import requests
+import json  # 添加 json 模块导入
+import html2text
+import io
+from markitdown import MarkItDown
 
 class RssReader:
     def __init__(self, proxy: Optional[str] = None):
@@ -17,6 +21,9 @@ class RssReader:
         self.feed : Optional[Dict] = None
         self.entries : List[Dict] = []
         self.proxy : Optional[str] = proxy
+        self.html2markdown = html2text.HTML2Text()
+        self.html2markdown.ignore_links = False  # 保留链接
+        self.html2markdown.ignore_images = False  # 保留图片
 
         # 设置代理
         if proxy:
@@ -44,6 +51,10 @@ class RssReader:
                 }
                 response = requests.get(url, proxies=proxies, timeout=10)
                 self.feed = feedparser.parse(response.content)
+
+                # 修改: 将 self.feed 转换为 JSON 字符串并写入文件
+                with open('output.txt', 'w', encoding='utf-8') as f:
+                    json.dump(self.feed, f, ensure_ascii=False, indent=4)
             else:
                 self.feed = feedparser.parse(url)
 
@@ -94,7 +105,8 @@ class RssReader:
                 'link': entry.get('link', ''),
                 'published': entry.get('published', ''),
                 'summary': html.unescape(entry.get('summary', '')),
-                'author': html.unescape(entry.get('author', ''))
+                'author': html.unescape(entry.get('author', '')),
+                'content': self.html2markdown.handle(html.unescape(entry.get('content', [{}])[0].get('value', '')) if entry.get('content', [{}]) else '')
             }
             entries.append(entry_dict)
 
@@ -125,7 +137,8 @@ class RssReader:
                         'link': entry.get('link', ''),
                         'published': entry.get('published', ''),
                         'summary': html.unescape(entry.get('summary', '')),
-                        'author': html.unescape(entry.get('author', ''))
+                        'author': html.unescape(entry.get('author', '')),
+                        'content': self.html2markdown.handle(html.unescape(entry.get('content', [{}])[0].get('value', '')) if entry.get('content', [{}]) else '')
                     }
                     filtered_entries.append(entry_dict)
 
@@ -193,6 +206,7 @@ def main():
                         print(f"发布时间: {entry['published']}")
                         print(f"作者: {entry['author']}")
                         print(f"摘要: {entry['summary']}")
+                        print(f"内容: {entry['content']}")
                     break  # 成功获取数据，跳出重试循环
                 else:
                     print(f"解析RSS源失败 (尝试 {attempt + 1}/{max_retries})")

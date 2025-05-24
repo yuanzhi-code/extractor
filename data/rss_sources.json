@@ -2,7 +2,7 @@
     "sources": [
         {
             "name": "op7418 Twitter",
-            "url": "https://huggingface.co/blog/feed.xml",
+            "url": "https://www.geekpark.net/rss",
             "description": "op7418的Twitter动态"
         }
     ]
