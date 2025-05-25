@@ -1,13 +1,12 @@
+import logging
 import feedparser
 from datetime import datetime
 from typing import List, Dict, Optional
 import html
-from requests.exceptions import RequestException
 import os
 import requests
 import json  # 添加 json 模块导入
 import html2text
-import io
 
 class RssReader:
     def __init__(self, proxy: Optional[str] = None):
@@ -31,6 +30,26 @@ class RssReader:
             # 设置feedparser的代理
             feedparser.USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 
+    def _process_entry(self, entry: Dict) -> Dict:
+        """
+        处理单个RSS条目，提取并转换字段
+    
+        Args:
+            entry: RSS条目字典
+            
+        Returns:
+            Dict: 处理后的条目字典
+        """
+        return {
+            'title': html.unescape(entry.get('title', '')),
+            'link': entry.get('link', ''),
+            'published': entry.get('published', ''),
+            'summary': html.unescape(entry.get('summary', '')),
+            'author': html.unescape(entry.get('author', '')),
+            'content': self.html2markdown.handle(
+                html.unescape(entry.get('content', [{}])[0].get('value', ''))
+            ) if entry.get('content', [{}]) else ''
+        }
     def parse_feed(self, url: str) -> bool:
         """
         解析指定URL的RSS源
@@ -52,19 +71,20 @@ class RssReader:
                 self.feed = feedparser.parse(response.content)
 
                 # 修改: 将 self.feed 转换为 JSON 字符串并写入文件
-                with open('output.txt', 'w', encoding='utf-8') as f:
+                with open('output.json', 'w', encoding='utf-8') as f:
                     json.dump(self.feed, f, ensure_ascii=False, indent=4)
             else:
                 self.feed = feedparser.parse(url)
 
             if self.feed.bozo:  # 检查是否有解析错误
-                print(f"解析警告: {self.feed.bozo_exception}")
+                logging.warning(f"解析警告: {self.feed.bozo_exception}")
+
                 return False
 
             self.entries = self.feed.entries
             return True
         except Exception as e:
-            print(f"解析RSS源时发生错误: {str(e)}")
+            logging.error(f"解析RSS源时发生错误: {str(e)}")
             return False
 
     def get_feed_info(self) -> Dict[str, str]:
@@ -97,19 +117,7 @@ class RssReader:
         if not self.entries:
             return []
 
-        entries = []
-        for entry in self.entries[:limit]:
-            entry_dict = {
-                'title': html.unescape(entry.get('title', '')),
-                'link': entry.get('link', ''),
-                'published': entry.get('published', ''),
-                'summary': html.unescape(entry.get('summary', '')),
-                'author': html.unescape(entry.get('author', '')),
-                'content': self.html2markdown.handle(html.unescape(entry.get('content', [{}])[0].get('value', '')) if entry.get('content', [{}]) else '')
-            }
-            entries.append(entry_dict)
-
-        return entries
+        return [self._process_entry(entry) for entry in self.entries[:limit]]
 
     def get_entries_by_date(self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> List[Dict]:
         """
@@ -131,16 +139,7 @@ class RssReader:
             if published:
                 published_datetime = datetime(*published[:6])
                 if (start_date is None or published_datetime >= start_date) and (end_date is None or published_datetime <= end_date):
-                    entry_dict = {
-                        'title': html.unescape(entry.get('title', '')),
-                        'link': entry.get('link', ''),
-                        'published': entry.get('published', ''),
-                        'summary': html.unescape(entry.get('summary', '')),
-                        'author': html.unescape(entry.get('author', '')),
-                        'content': self.html2markdown.handle(html.unescape(entry.get('content', [{}])[0].get('value', '')) if entry.get('content', [{}]) else '')
-                    }
-                    filtered_entries.append(entry_dict)
-
+                    filtered_entries.append(self._process_entry(entry))
         return filtered_entries
 # def main():
 #     """

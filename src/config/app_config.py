@@ -1,6 +1,3 @@
-
-# file: /Users/woxqaq/extractor/src/config/feed_config.py
-
 from typing import Optional
 
 from pydantic import Field
