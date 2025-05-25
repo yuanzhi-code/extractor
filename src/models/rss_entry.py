@@ -40,7 +40,7 @@ class RssEntry(Base):
 
     __tablename__ = "rss_entry"
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
-    feed_id: orm.Mapped[int] = orm.mapped_column(Integer(), nullable=False)
+    feed_id: orm.Mapped[int] = orm.mapped_column(Integer(), nullable=True)
     link: orm.Mapped[str] = orm.mapped_column(String(255), nullable=False)
     content: orm.Mapped[str] = orm.mapped_column(TEXT, nullable=False)
     title: orm.Mapped[str] = orm.mapped_column(String(255), nullable=False)
@@ -48,6 +48,7 @@ class RssEntry(Base):
     status: orm.Mapped[int] = orm.mapped_column(
         SmallInteger(), nullable=False, default=0
     )
+    summary: orm.Mapped[str] = orm.mapped_column(String(255), nullable=False)
     published_at: orm.Mapped[datetime] = orm.mapped_column(nullable=False)
     created_gmt: orm.Mapped[datetime] = orm.mapped_column(
         nullable=False, default=datetime.now

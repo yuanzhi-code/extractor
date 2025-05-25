@@ -72,7 +72,7 @@ def main():
                         logging.info(f"\n条目 {i}:")
                         logging.info(f"标题: {entry['title']}")
                         logging.info(f"链接: {entry['link']}")
-                        logging.info(f"发布时间: {entry['published']}")
+                        logging.info(f"发布时间: {entry['published_at']}")
                         logging.info(f"作者: {entry['author']}")
                         logging.info(f"摘要: {entry['summary']}")
                         logging.info(f"内容: {entry['content']}")

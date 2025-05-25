@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 4ccf2ade5cf5
+Revision ID: 4270c6fdeddb
 Revises:
-Create Date: 2025-05-25 11:53:56.694807
+Create Date: 2025-05-25 18:30:15.805887
 
 """
 
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "4ccf2ade5cf5"
+revision: str = "4270c6fdeddb"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -34,12 +34,13 @@ def upgrade() -> None:
     op.create_table(
         "rss_entry",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("feed_id", sa.Integer(), nullable=False),
+        sa.Column("feed_id", sa.Integer(), nullable=True),
         sa.Column("link", sa.String(length=255), nullable=False),
         sa.Column("content", sa.TEXT(), nullable=False),
         sa.Column("title", sa.String(length=255), nullable=False),
         sa.Column("author", sa.String(length=255), nullable=False),
         sa.Column("status", sa.SmallInteger(), nullable=False),
+        sa.Column("summary", sa.String(length=255), nullable=False),
         sa.Column("published_at", sa.DateTime(), nullable=False),
         sa.Column("created_gmt", sa.DateTime(), nullable=False),
         sa.Column("modified_gmt", sa.DateTime(), nullable=False),

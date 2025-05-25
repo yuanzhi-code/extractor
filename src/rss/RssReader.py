@@ -1,4 +1,5 @@
 import logging
+from sqlite3 import IntegrityError
 import feedparser
 from datetime import datetime
 from typing import List, Dict, Optional
@@ -7,6 +8,11 @@ import os
 import requests
 import json  # 添加 json 模块导入
 import html2text
+
+from models import db
+from sqlalchemy.orm import Session
+
+from models.rss_entry import RssEntry
 
 
 class RssReader:
@@ -41,7 +47,10 @@ class RssReader:
         Returns:
             Dict: 处理后的条目字典
         """
-        return {
+        published_at = datetime.strptime(
+            entry.get("published", ""), "%a, %d %b %Y %H:%M:%S %z"
+        )
+        entry = {
             "title": html.unescape(entry.get("title", "")),
             "link": entry.get("link", ""),
             "published": entry.get("published", ""),
@@ -57,6 +66,17 @@ class RssReader:
                 else ""
             ),
         }
+        with Session(db) as session:
+            new_entry = entry.copy()
+            new_entry.pop("published")
+            new_entry["published_at"] = published_at
+            try:
+                session.add(RssEntry(**new_entry))
+                session.commit()
+            except IntegrityError:
+                session.rollback()
+                logging.info(f"Entry with link {entry['link']} already exists")
+        return entry
 
     def parse_feed(self, url: str) -> bool:
         """
