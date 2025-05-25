@@ -1,9 +1,9 @@
 {
     "sources": [
         {
-            "name": "op7418 Twitter",
+            "name": "geekpark",
             "url": "https://www.geekpark.net/rss",
-            "description": "op7418的Twitter动态"
+            "description": "geekpark rss source"
         }
     ]
 } 

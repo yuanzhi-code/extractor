@@ -1,7 +1,14 @@
 from datetime import datetime
 from enum import IntEnum, StrEnum
 from typing import Optional
-from sqlalchemy import Index, Integer, SmallInteger, String, UniqueConstraint, orm
+from sqlalchemy import (
+    Index,
+    Integer,
+    SmallInteger,
+    String,
+    UniqueConstraint,
+    orm,
+)
 
 from models.base import Base
 
@@ -18,6 +25,7 @@ class RssFeed(Base):
         language (str): RSS Feed 的语言代码，最大长度为 50 个字符。
         updated (datetime): RSS Feed 最后更新的时间，不能为空。
     """
+
     __tablename__ = "rss_feed"
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
     title: orm.Mapped[str] = orm.mapped_column(String(255), nullable=False)

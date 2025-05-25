@@ -9,6 +9,9 @@ __pycache__/
 # local sqlite
 *.db
 
+# program output
+output.*
+
 # Distribution / packaging
 .Python
 build/

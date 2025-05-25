@@ -2,7 +2,15 @@ from datetime import datetime
 from enum import IntEnum, StrEnum
 from typing import Optional
 from numpy import integer
-from sqlalchemy import Index, Integer, SmallInteger, String, UniqueConstraint, orm, TEXT
+from sqlalchemy import (
+    Index,
+    Integer,
+    SmallInteger,
+    String,
+    UniqueConstraint,
+    orm,
+    TEXT,
+)
 from models.base import Base
 
 
@@ -32,7 +40,7 @@ class RssEntry(Base):
 
     __tablename__ = "rss_entry"
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
-    feed_id: orm.Mapped[int] = orm.mapped_column(Integer(), nullable=False)
+    feed_id: orm.Mapped[int] = orm.mapped_column(Integer(), nullable=True)
     link: orm.Mapped[str] = orm.mapped_column(String(255), nullable=False)
     content: orm.Mapped[str] = orm.mapped_column(TEXT, nullable=False)
     title: orm.Mapped[str] = orm.mapped_column(String(255), nullable=False)
@@ -40,6 +48,7 @@ class RssEntry(Base):
     status: orm.Mapped[int] = orm.mapped_column(
         SmallInteger(), nullable=False, default=0
     )
+    summary: orm.Mapped[str] = orm.mapped_column(String(255), nullable=False)
     published_at: orm.Mapped[datetime] = orm.mapped_column(nullable=False)
     created_gmt: orm.Mapped[datetime] = orm.mapped_column(
         nullable=False, default=datetime.now
@@ -48,9 +57,7 @@ class RssEntry(Base):
         nullable=False, default=datetime.now
     )
     __table_args__ = (
-        UniqueConstraint(
-            "link", name="unique_rss_entry_link"
-        ),
+        UniqueConstraint("link", name="unique_rss_entry_link"),
         Index("idx_rss_entry_status", "status"),
         Index("idx_rss_entry_published_at", "published_at"),
     )

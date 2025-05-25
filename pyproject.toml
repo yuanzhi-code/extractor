@@ -13,6 +13,7 @@ dependencies = [
     "anyio==4.9.0",
     "attrs==25.3.0",
     "beautifulsoup4==4.13.4",
+    "black>=25.1.0",
     "bs4==0.0.2",
     "certifi==2025.4.26",
     "charset-normalizer==3.4.2",
@@ -82,6 +83,9 @@ dependencies = [
 name = "tsinghua"
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = true
+
+[tool.black]
+line-length = 80
 
 [tool.pytest.ini_options]
 pythonpath = [
