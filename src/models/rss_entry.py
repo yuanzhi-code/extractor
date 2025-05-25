@@ -49,10 +49,10 @@ class RssEntry(Base):
     )
     __table_args__ = (
         UniqueConstraint(
-            "link", name="unique_source_type_source_url"
+            "link", name="unique_rss_entry_link"
         ),
-        Index("idx_tb_rss_feeds_status", "status"),
-        Index("idx_tb_rss_feeds_published_at", "published_at"),
+        Index("idx_rss_entry_status", "status"),
+        Index("idx_rss_entry_published_at", "published_at"),
     )
 
     def get_status(self) -> FeedStatus:
