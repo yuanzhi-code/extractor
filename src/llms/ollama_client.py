@@ -9,7 +9,9 @@ from litellm import completion
 
 class OllamaClient:
     def __init__(
-        self, model_name: str = "qwen3:4b", base_url: str = "http://localhost:11434"
+        self,
+        model_name: str = "qwen3:4b",
+        base_url: str = "http://localhost:11434",
     ):
         """
         初始化Ollama客户端

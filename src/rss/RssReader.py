@@ -49,7 +49,9 @@ class RssReader:
             "author": html.unescape(entry.get("author", "")),
             "content": (
                 self.html2markdown.handle(
-                    html.unescape(entry.get("content", [{}])[0].get("value", ""))
+                    html.unescape(
+                        entry.get("content", [{}])[0].get("value", "")
+                    )
                 )
                 if entry.get("content", [{}])
                 else ""
@@ -123,7 +125,9 @@ class RssReader:
         return [self._process_entry(entry) for entry in self.entries[:limit]]
 
     def get_entries_by_date(
-        self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
+        self,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
     ) -> List[Dict]:
         """
         根据时间范围获取RSS条目列表
@@ -143,9 +147,9 @@ class RssReader:
             published = entry.get("published_parsed")
             if published:
                 published_datetime = datetime(*published[:6])
-                if (start_date is None or published_datetime >= start_date) and (
-                    end_date is None or published_datetime <= end_date
-                ):
+                if (
+                    start_date is None or published_datetime >= start_date
+                ) and (end_date is None or published_datetime <= end_date):
                     filtered_entries.append(self._process_entry(entry))
         return filtered_entries
 

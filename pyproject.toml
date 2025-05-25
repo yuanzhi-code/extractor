@@ -84,6 +84,9 @@ name = "tsinghua"
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = true
 
+[tool.black]
+line-length = 80
+
 [tool.pytest.ini_options]
 pythonpath = [
     "."

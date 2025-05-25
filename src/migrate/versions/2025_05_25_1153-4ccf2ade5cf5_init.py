@@ -47,9 +47,14 @@ def upgrade() -> None:
         sa.UniqueConstraint("link", name="unique_rss_entry_link"),
     )
     op.create_index(
-        "idx_rss_entry_published_at", "rss_entry", ["published_at"], unique=False
+        "idx_rss_entry_published_at",
+        "rss_entry",
+        ["published_at"],
+        unique=False,
     )
-    op.create_index("idx_rss_entry_status", "rss_entry", ["status"], unique=False)
+    op.create_index(
+        "idx_rss_entry_status", "rss_entry", ["status"], unique=False
+    )
     op.create_table(
         "rss_feed",
         sa.Column("id", sa.Integer(), nullable=False),

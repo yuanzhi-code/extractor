@@ -53,7 +53,9 @@ def main():
 
                     today = datetime.today()
                     start_date = datetime(today.year, today.month, 1)
-                    end_date = datetime(today.year, today.month, 1) + timedelta(days=31)
+                    end_date = datetime(today.year, today.month, 1) + timedelta(
+                        days=31
+                    )
                     end_date = end_date.replace(day=1) - timedelta(days=1)
 
                     # 获取最新的3条条目
@@ -76,7 +78,9 @@ def main():
                         logging.info(f"内容: {entry['content']}")
                     break  # 成功获取数据，跳出重试循环
                 else:
-                    logging.warning(f"解析RSS源失败 (尝试 {attempt + 1}/{max_retries})")
+                    logging.warning(
+                        f"解析RSS源失败 (尝试 {attempt + 1}/{max_retries})"
+                    )
                     if attempt < max_retries - 1:
                         logging.warning(f"等待 {retry_delay} 秒后重试...")
                         time.sleep(retry_delay)
