@@ -6,13 +6,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class AppConfig(BaseSettings):
     NETWORK_PROXY: str = Field(
-        description="代理地址，格式如 'http://127.0.0.1:7890'"
-        ,default=""
+        description="代理地址，格式如 'http://127.0.0.1:7890'", default=""
     )
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8"
-        ,extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
     # def __init__(self, proxy: Optional[str] = None):
     #     """

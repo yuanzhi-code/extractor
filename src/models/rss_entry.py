@@ -48,9 +48,7 @@ class RssEntry(Base):
         nullable=False, default=datetime.now
     )
     __table_args__ = (
-        UniqueConstraint(
-            "link", name="unique_rss_entry_link"
-        ),
+        UniqueConstraint("link", name="unique_rss_entry_link"),
         Index("idx_rss_entry_status", "status"),
         Index("idx_rss_entry_published_at", "published_at"),
     )

@@ -8,6 +8,7 @@ import requests
 import json  # 添加 json 模块导入
 import html2text
 
+
 class RssReader:
     def __init__(self, proxy: Optional[str] = None):
         """
@@ -16,40 +17,45 @@ class RssReader:
         Args:
             proxy: 代理服务器地址，格式如 'http://127.0.0.1:7890'
         """
-        self.feed : Optional[Dict] = None
-        self.entries : List[Dict] = []
-        self.proxy : Optional[str] = proxy
+        self.feed: Optional[Dict] = None
+        self.entries: List[Dict] = []
+        self.proxy: Optional[str] = proxy
         self.html2markdown = html2text.HTML2Text()
         self.html2markdown.ignore_links = False  # 保留链接
         self.html2markdown.ignore_images = False  # 保留图片
 
         # 设置代理
         if proxy:
-            os.environ['http_proxy'] = proxy
-            os.environ['https_proxy'] = proxy
+            os.environ["http_proxy"] = proxy
+            os.environ["https_proxy"] = proxy
             # 设置feedparser的代理
-            feedparser.USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            feedparser.USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 
     def _process_entry(self, entry: Dict) -> Dict:
         """
         处理单个RSS条目，提取并转换字段
-    
+
         Args:
             entry: RSS条目字典
-            
+
         Returns:
             Dict: 处理后的条目字典
         """
         return {
-            'title': html.unescape(entry.get('title', '')),
-            'link': entry.get('link', ''),
-            'published': entry.get('published', ''),
-            'summary': html.unescape(entry.get('summary', '')),
-            'author': html.unescape(entry.get('author', '')),
-            'content': self.html2markdown.handle(
-                html.unescape(entry.get('content', [{}])[0].get('value', ''))
-            ) if entry.get('content', [{}]) else ''
+            "title": html.unescape(entry.get("title", "")),
+            "link": entry.get("link", ""),
+            "published": entry.get("published", ""),
+            "summary": html.unescape(entry.get("summary", "")),
+            "author": html.unescape(entry.get("author", "")),
+            "content": (
+                self.html2markdown.handle(
+                    html.unescape(entry.get("content", [{}])[0].get("value", ""))
+                )
+                if entry.get("content", [{}])
+                else ""
+            ),
         }
+
     def parse_feed(self, url: str) -> bool:
         """
         解析指定URL的RSS源
@@ -63,15 +69,12 @@ class RssReader:
         try:
             # 使用requests获取内容，支持代理
             if self.proxy:
-                proxies = {
-                    'http': self.proxy,
-                    'https': self.proxy
-                }
+                proxies = {"http": self.proxy, "https": self.proxy}
                 response = requests.get(url, proxies=proxies, timeout=10)
                 self.feed = feedparser.parse(response.content)
 
                 # 修改: 将 self.feed 转换为 JSON 字符串并写入文件
-                with open('output.json', 'w', encoding='utf-8') as f:
+                with open("output.json", "w", encoding="utf-8") as f:
                     json.dump(self.feed, f, ensure_ascii=False, indent=4)
             else:
                 self.feed = feedparser.parse(url)
@@ -97,11 +100,11 @@ class RssReader:
         if not self.feed:
             return {}
         return {
-            'title': html.unescape(self.feed.get('title', '')),
-            'description': html.unescape(self.feed.get('description', '')),
-            'link': self.feed.get('link', ''),
-            'language': self.feed.get('language', ''),
-            'updated': self.feed.get('updated', '')
+            "title": html.unescape(self.feed.get("title", "")),
+            "description": html.unescape(self.feed.get("description", "")),
+            "link": self.feed.get("link", ""),
+            "language": self.feed.get("language", ""),
+            "updated": self.feed.get("updated", ""),
         }
 
     def get_entries(self, limit: Optional[int] = None) -> List[Dict]:
@@ -119,7 +122,9 @@ class RssReader:
 
         return [self._process_entry(entry) for entry in self.entries[:limit]]
 
-    def get_entries_by_date(self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> List[Dict]:
+    def get_entries_by_date(
+        self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
+    ) -> List[Dict]:
         """
         根据时间范围获取RSS条目列表
 
@@ -135,12 +140,16 @@ class RssReader:
 
         filtered_entries = []
         for entry in self.entries:
-            published = entry.get('published_parsed')
+            published = entry.get("published_parsed")
             if published:
                 published_datetime = datetime(*published[:6])
-                if (start_date is None or published_datetime >= start_date) and (end_date is None or published_datetime <= end_date):
+                if (start_date is None or published_datetime >= start_date) and (
+                    end_date is None or published_datetime <= end_date
+                ):
                     filtered_entries.append(self._process_entry(entry))
         return filtered_entries
+
+
 # def main():
 #     """
 #     测试RSS阅读器功能
