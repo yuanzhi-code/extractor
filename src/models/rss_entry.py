@@ -40,7 +40,7 @@ class RssEntry(Base):
     status: orm.Mapped[int] = orm.mapped_column(
         SmallInteger(), nullable=False, default=0
     )
-    published: orm.Mapped[datetime] = orm.mapped_column(nullable=False)
+    published_at: orm.Mapped[datetime] = orm.mapped_column(nullable=False)
     created_gmt: orm.Mapped[datetime] = orm.mapped_column(
         nullable=False, default=datetime.now
     )
@@ -49,7 +49,7 @@ class RssEntry(Base):
     )
     __table_args__ = (
         UniqueConstraint(
-            "source_url", name="unique_source_type_source_url"
+            "link", name="unique_source_type_source_url"
         ),
         Index("idx_tb_rss_feeds_status", "status"),
         Index("idx_tb_rss_feeds_published_at", "published_at"),

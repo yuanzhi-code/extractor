@@ -8,5 +8,5 @@ sqlite_path = os.path.abspath("../app.db")
 DATABASE_URI = f'sqlite:///${sqlite_path}'
 
 # 创建数据库引擎
-engine = create_engine(DATABASE_URI, echo=True, pool_size=10)
+db = create_engine(DATABASE_URI, echo=True, pool_size=10)
 
