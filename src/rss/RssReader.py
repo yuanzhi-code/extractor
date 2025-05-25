@@ -13,9 +13,11 @@ from models import db
 from sqlalchemy.orm import Session
 
 from models.rss_entry import RssEntry
+from models.rss_feed import RssFeed
 
 
 class RssReader:
+    # TODO(woxqaq): add cache for feeds and entries
     def __init__(self, proxy: Optional[str] = None):
         """
         初始化RSS阅读器
@@ -37,7 +39,7 @@ class RssReader:
             # 设置feedparser的代理
             feedparser.USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 
-    def _process_entry(self, entry: Dict) -> Dict:
+    def _process_entry(self,feed_info: Dict[str,str], entry: Dict) -> Dict:
         """
         处理单个RSS条目，提取并转换字段
 
@@ -52,6 +54,7 @@ class RssReader:
         )
         entry = {
             "title": html.unescape(entry.get("title", "")),
+            "feed_id": feed_info.get("id"),
             "link": entry.get("link", ""),
             "published": entry.get("published", ""),
             "summary": html.unescape(entry.get("summary", "")),
@@ -121,7 +124,7 @@ class RssReader:
         """
         if not self.feed:
             return {}
-        return {
+        feed_info = {
             "title": html.unescape(self.feed.get("title", "")),
             "description": html.unescape(self.feed.get("description", "")),
             "link": self.feed.get("link", ""),
@@ -129,7 +132,27 @@ class RssReader:
             "updated": self.feed.get("updated", ""),
         }
 
-    def get_entries(self, limit: Optional[int] = None) -> List[Dict]:
+        with Session(db) as session:
+            rss_feed = RssFeed(
+                title=feed_info["title"],
+                description=feed_info["description"],
+                link=feed_info["link"],
+                language=feed_info["language"],
+                updated=datetime.strptime(
+                    feed_info.get("updated", ""), "%a, %d %b %Y %H:%M:%S %z"
+                ),
+            )
+            try:
+                session.add(rss_feed)
+                session.commit()
+                session.refresh(rss_feed)
+                feed_info["id"] = rss_feed.id
+            except IntegrityError:
+                logging.info("RSS源已存在，跳过添加")
+
+        return feed_info
+
+    def get_entries(self, feed_info: Dict[str,str],limit: Optional[int] = None) -> List[Dict]:
         """
         获取RSS条目列表
 
@@ -142,10 +165,11 @@ class RssReader:
         if not self.entries:
             return []
 
-        return [self._process_entry(entry) for entry in self.entries[:limit]]
+        return [self._process_entry(feed_info,entry) for entry in self.entries[:limit]]
 
     def get_entries_by_date(
         self,
+        feed_info: Dict[str,str],
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> List[Dict]:
@@ -172,89 +196,3 @@ class RssReader:
                 ) and (end_date is None or published_datetime <= end_date):
                     filtered_entries.append(self._process_entry(entry))
         return filtered_entries
-
-
-# def main():
-#     """
-#     测试RSS阅读器功能
-#     """
-#     import json
-#     import time
-#     from requests.exceptions import RequestException
-#     from datetime import datetime, timedelta
-
-#     # 设置代理
-#     proxy = "http://127.0.0.1:7897"  # 根据您的实际代理地址修改
-
-#     # 读取RSS源配置
-#     try:
-#         with open('data/rss_sources.json', 'r', encoding='utf-8') as f:
-#             config = json.load(f)
-#     except Exception as e:
-#         print(f"读取配置文件失败: {str(e)}")
-#         return
-
-#     # 创建RSS阅读器实例，传入代理设置
-#     reader = RssReader(proxy=proxy)
-
-#     # 遍历所有RSS源
-#     for source in config['sources']:
-#         print(f"\n正在处理RSS源: {source['name']}")
-#         print(f"URL: {source['url']}")
-#         print(f"描述: {source['description']}")
-#         print("-" * 50)
-
-#         # 添加重试机制
-#         max_retries = 3
-#         retry_delay = 5  # 秒
-
-#         for attempt in range(max_retries):
-#             try:
-#                 # 解析RSS源
-#                 if reader.parse_feed(source['url']):
-#                     # 获取RSS源信息
-#                     feed_info = reader.get_feed_info()
-#                     print(f"Feed标题: {feed_info['title']}")
-#                     print(f"Feed描述: {feed_info['description']}")
-#                     print(f"Feed链接: {feed_info['link']}")
-#                     print(f"Feed语言: {feed_info['language']}")
-#                     print(f"最后更新: {feed_info['updated']}")
-#                     print("-" * 50)
-
-#                     # 获取本月的起始日期和结束日期
-#                     today = datetime.today()
-#                     start_date = datetime(today.year, today.month, 1)
-#                     end_date = datetime(today.year, today.month, 1) + timedelta(days=31)
-#                     end_date = end_date.replace(day=1) - timedelta(days=1)
-
-#                     # 获取本月的RSS条目
-#                     print(f"本月的RSS条目 ({start_date.strftime('%Y-%m-%d')} 至 {end_date.strftime('%Y-%m-%d')}):")
-#                     entries = reader.get_entries_by_date(start_date=start_date, end_date=end_date)
-#                     for i, entry in enumerate(entries, 1):
-#                         print(f"\n条目 {i}:")
-#                         print(f"标题: {entry['title']}")
-#                         print(f"链接: {entry['link']}")
-#                         print(f"发布时间: {entry['published']}")
-#                         print(f"作者: {entry['author']}")
-#                         print(f"摘要: {entry['summary']}")
-#                         print(f"内容: {entry['content']}")
-#                     break  # 成功获取数据，跳出重试循环
-#                 else:
-#                     print(f"解析RSS源失败 (尝试 {attempt + 1}/{max_retries})")
-#                     if attempt < max_retries - 1:
-#                         print(f"等待 {retry_delay} 秒后重试...")
-#                         time.sleep(retry_delay)
-#             except RequestException as e:
-#                 print(f"网络请求错误 (尝试 {attempt + 1}/{max_retries}): {str(e)}")
-#                 if attempt < max_retries - 1:
-#                     print(f"等待 {retry_delay} 秒后重试...")
-#                     time.sleep(retry_delay)
-#             except Exception as e:
-#                 print(f"发生未知错误: {str(e)}")
-#                 break
-
-#         # 在请求之间添加延时，避免请求过于频繁
-#         time.sleep(2)
-
-# if __name__ == "__main__":
-#     main()

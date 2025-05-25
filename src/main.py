@@ -65,6 +65,7 @@ def main():
                     )
                     entries = rssReader.get_entries_by_date(
                         start_date=start_date, end_date=end_date
+                        ,feed_info=feed_info,
                     )
                     with open("output.json", "w", encoding="utf-8") as f:
                         json.dump(entries, f, ensure_ascii=False, indent=4)
