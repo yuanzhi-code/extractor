@@ -18,7 +18,7 @@ def main():
     """
     config = AppConfig()
     rssReader = RssReader(config.NETWORK_PROXY)
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(filename)s:%(lineno)d %(message)s')
 
     try:
         with open("../data/rss_sources.json", "r", encoding="utf-8") as f:
@@ -30,7 +30,7 @@ def main():
     session = Session(db)
     # 遍历所有RSS源
     for source in sources["sources"]:
-        logging.info(f"\n正在处理RSS源: {source['name']}")
+        logging.info(f"正在处理RSS源: {source['name']}")
         logging.info(f"URL: {source['url']}")
         logging.info(f"描述: {source['description']}")
         logging.info("-" * 50)
@@ -75,7 +75,7 @@ def main():
                         logging.info(f"\n条目 {i}:")
                         logging.info(f"标题: {entry['title']}")
                         logging.info(f"链接: {entry['link']}")
-                        logging.info(f"发布时间: {entry['published_at']}")
+                        logging.info(f"发布时间: {entry['published']}")
                         logging.info(f"作者: {entry['author']}")
                         logging.info(f"摘要: {entry['summary']}")
                         logging.info(f"内容: {entry['content']}")

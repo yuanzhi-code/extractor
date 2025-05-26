@@ -4,16 +4,19 @@ import logging
 import os
 from datetime import datetime
 from sqlite3 import IntegrityError
+import time
 from typing import Dict, List, Optional
 
 import feedparser
 import html2text
 import requests
+import sqlalchemy
 from sqlalchemy.orm import Session
 
 from models import db
 from models.rss_entry import RssEntry
 from models.rss_feed import RssFeed
+from crawl.crawl import WebContentExtractor
 
 
 class RssReader:
@@ -69,16 +72,29 @@ class RssReader:
                 else ""
             ),
         }
+
+        if entry.get("content") == "" and entry.get("link") != "":
+            with WebContentExtractor() as extractor:
+                content = extractor.extract_main_content(entry.get("link"))
+                entry["content"] = content
+
         with Session(db) as session:
             new_entry = entry.copy()
             new_entry.pop("published")
             new_entry["published_at"] = published_at
+            
             try:
                 session.add(RssEntry(**new_entry))
                 session.commit()
-            except IntegrityError:
+            except IntegrityError as e:
                 session.rollback()
-                logging.info(f"Entry with link {entry['link']} already exists")
+                # 使用 warning 而不是 warn，并记录更详细的错误信息
+                logging.warning(f"Entry with link {entry['link']} already exists: {str(e)}")
+            except Exception as e:
+                session.rollback()
+                logging.error(f"Database error when processing entry {entry['link']}: {str(e)}")
+
+
         return entry
 
     def parse_feed(self, url: str) -> bool:
@@ -110,6 +126,7 @@ class RssReader:
                 return False
 
             self.entries = self.feed.entries
+            self.feed = self.feed.feed
             return True
         except Exception as e:
             logging.error(f"解析RSS源时发生错误: {str(e)}")
@@ -132,7 +149,18 @@ class RssReader:
             "updated": self.feed.get("updated", ""),
         }
 
+        if feed_info["updated"] == '':
+            # 使用 entry 的第一条的时间作为 updated time
+            feed_info["updated"] =  self.entries[0].get("published") 
+        
+        logging.info(f"Feed信息: {feed_info}")
+
         with Session(db) as session:
+            rss_feed = session.query(RssFeed).filter_by(link=feed_info["link"]).first()
+            if rss_feed is not None:
+                feed_info["id"] = rss_feed.id
+                return feed_info
+            
             rss_feed = RssFeed(
                 title=feed_info["title"],
                 description=feed_info["description"],
@@ -148,7 +176,19 @@ class RssReader:
                 session.refresh(rss_feed)
                 feed_info["id"] = rss_feed.id
             except IntegrityError:
-                logging.info("RSS源已存在，跳过添加")
+                session.rollback()
+                logging.warning(f"RSS源已存在，跳过添加")
+                # 当RSS源已存在时，查询现有的feed_id
+                existing_feed = session.query(RssFeed).filter_by(link=feed_info["link"]).first()
+                if existing_feed:
+                    feed_info["id"] = existing_feed.id
+                else:
+                    logging.error(f"无法找到现有的RSS源: {feed_info['link']}")
+            except Exception as e:
+                session.rollback()
+                logging.error(f"Database error when adding RSS feed: {str(e)}")
+                # 这里可以选择重新抛出异常，因为没有feed_id会导致后续操作失败
+                raise
 
         return feed_info
 

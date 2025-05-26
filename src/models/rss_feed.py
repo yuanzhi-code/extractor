@@ -28,3 +28,7 @@ class RssFeed(Base):
     link: orm.Mapped[str] = orm.mapped_column(String(255), nullable=False)
     language: orm.Mapped[str] = orm.mapped_column(String(50))
     updated: orm.Mapped[datetime] = orm.mapped_column()
+
+    __table_args__ = (
+        UniqueConstraint("link", name="uix_rss_feed_link"),
+    )
