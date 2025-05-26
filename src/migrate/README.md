@@ -1,5 +1,7 @@
 # Migration database schema with alembic
 
+本项目使用 alembic 管理数据库schema
+
 ## 前提条件
 
 - 同步依赖：
@@ -86,7 +88,7 @@ class User(Base):
 
 ## 注意事项
 
-- **模型变更**：如果修改了 `src/models/user.py`（如添加新字段），重新运行 `alembic revision --autogenerate -m "<desc>"` 和 `alembic upgrade head`。
-- **错误排查**：检查 Alembic 日志或 `src/models/db.py` 中 `engine` 的 `echo=True` 输出（如果启用），确保数据库连接和迁移脚本正确。
+- **模型变更**：如果修改了 `src/models`下的模型定义（如添加新字段），需要重新运行 `alembic revision --autogenerate -m "<desc>"`来生成新的 schema 版本 和 `alembic upgrade head` 将变更应用到数据库中。
+- **错误排查**：提交前需要确认变更能确实的应用到你的数据库中。
 - **备份**：在生产环境中，始终备份数据库后再应用迁移。
 - **模块导入**：确保 `src/migrate/env.py` 中的导入路径正确，Python 能够找到 `src.models.db` 和 `src.models.user` 模块。
