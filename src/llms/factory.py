@@ -18,6 +18,11 @@ class LLMFactory:
             "model": AppConfig().SILICONFLOW_MODEL,
             "api_key": AppConfig().SILICONFLOW_API_KEY,
         },
+        "deepseek": {
+            "base_url": "https://api.deepseek.com/v1",
+            "model": AppConfig().DEEPSEEK_MODEL,
+            "api_key": AppConfig().DEEPSEEK_API_KEY,
+        },
     }
 
     def get_llm(self, llm_type: str):
