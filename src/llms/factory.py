@@ -8,20 +8,21 @@ from .siliconflow_client import SiliconFlowClient
 
 
 class LLMFactory:
+    config = AppConfig()
     _factory_registry = {
         "ollama": {
-            "base_url": AppConfig.OLLAMA_URL,
-            "model": AppConfig().OLLAMA_MODEL,
+            "base_url": config.OLLAMA_URL,
+            "model": config.OLLAMA_MODEL,
         },
         "siliconflow": {
             "base_url": "https://api.siliconflow.cn/v1",
-            "model": AppConfig().SILICONFLOW_MODEL,
-            "api_key": AppConfig().SILICONFLOW_API_KEY,
+            "model": config.SILICONFLOW_MODEL,
+            "api_key": config.SILICONFLOW_API_KEY,
         },
         "deepseek": {
             "base_url": "https://api.deepseek.com/v1",
-            "model": AppConfig().DEEPSEEK_MODEL,
-            "api_key": AppConfig().DEEPSEEK_API_KEY,
+            "model": config.DEEPSEEK_MODEL,
+            "api_key": config.DEEPSEEK_API_KEY,
         },
     }
 
