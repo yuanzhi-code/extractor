@@ -1,10 +1,11 @@
+import asyncio
 import html
 import json  # 添加 json 模块导入
 import logging
 import os
+import time
 from datetime import datetime
 from sqlite3 import IntegrityError
-import time
 from typing import Dict, List, Optional
 
 import feedparser
@@ -13,10 +14,10 @@ import requests
 import sqlalchemy
 from sqlalchemy.orm import Session
 
+from crawl.crawl import WebContentExtractor, scrape_sync
 from models import db
 from models.rss_entry import RssEntry
 from models.rss_feed import RssFeed
-from crawl.crawl import WebContentExtractor
 
 
 class RssReader:
@@ -34,6 +35,7 @@ class RssReader:
         self.html2markdown = html2text.HTML2Text()
         self.html2markdown.ignore_links = False  # 保留链接
         self.html2markdown.ignore_images = False  # 保留图片
+        self.extractor = WebContentExtractor()
 
         # 设置代理
         if proxy:
@@ -73,27 +75,49 @@ class RssReader:
             ),
         }
 
-        if entry.get("content") == "" and entry.get("link") != "":
-            with WebContentExtractor() as extractor:
-                content = extractor.extract_main_content(entry.get("link"))
-                entry["content"] = content
+        # TODO(woxqaq): crawl api is too slow, we should use a better way to get the content
+        if entry.get("content").strip() == "" and entry.get("link") != "":
+            content = scrape_sync(entry.get("link")).get("content")
+            entry["content"] = content
 
         with Session(db) as session:
             new_entry = entry.copy()
             new_entry.pop("published")
             new_entry["published_at"] = published_at
-            
+
             try:
-                session.add(RssEntry(**new_entry))
-                session.commit()
+                existing_entry = (
+                    session.query(RssEntry)
+                    .filter_by(link=entry["link"])
+                    .first()
+                )
+                if existing_entry:
+                    if existing_entry.content.strip() == "":
+                        # existing entry has no content, update it
+                        existing_entry.content = new_entry["content"]
+                        existing_entry.published_at = new_entry["published_at"]
+                        # update the entry
+                        session.add(existing_entry)
+                        session.commit()
+                    else:
+                        # existing entry has content, skip it
+                        return entry
+                else:
+                    session.add(RssEntry(**new_entry))
+                    session.commit()
             except IntegrityError as e:
+                # after check the entry, if it already exists, we dont add entry directly
+                # this expect seems meanless
                 session.rollback()
                 # 使用 warning 而不是 warn，并记录更详细的错误信息
-                logging.warning(f"Entry with link {entry['link']} already exists: {str(e)}")
+                logging.warning(
+                    f"Entry with link {entry['link']} already exists: {str(e)}"
+                )
             except Exception as e:
                 session.rollback()
-                logging.error(f"Database error when processing entry {entry['link']}: {str(e)}")
-
+                logging.error(
+                    f"Database error when processing entry {entry['link']}: {str(e)}"
+                )
 
         return entry
 
@@ -149,18 +173,20 @@ class RssReader:
             "updated": self.feed.get("updated", ""),
         }
 
-        if feed_info["updated"] == '':
+        if feed_info["updated"] == "":
             # 使用 entry 的第一条的时间作为 updated time
-            feed_info["updated"] =  self.entries[0].get("published") 
-        
+            feed_info["updated"] = self.entries[0].get("published")
+
         logging.info(f"Feed信息: {feed_info}")
 
         with Session(db) as session:
-            rss_feed = session.query(RssFeed).filter_by(link=feed_info["link"]).first()
+            rss_feed = (
+                session.query(RssFeed).filter_by(link=feed_info["link"]).first()
+            )
             if rss_feed is not None:
                 feed_info["id"] = rss_feed.id
                 return feed_info
-            
+
             rss_feed = RssFeed(
                 title=feed_info["title"],
                 description=feed_info["description"],
@@ -179,7 +205,11 @@ class RssReader:
                 session.rollback()
                 logging.warning(f"RSS源已存在，跳过添加")
                 # 当RSS源已存在时，查询现有的feed_id
-                existing_feed = session.query(RssFeed).filter_by(link=feed_info["link"]).first()
+                existing_feed = (
+                    session.query(RssFeed)
+                    .filter_by(link=feed_info["link"])
+                    .first()
+                )
                 if existing_feed:
                     feed_info["id"] = existing_feed.id
                 else:

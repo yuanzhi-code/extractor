@@ -18,7 +18,10 @@ def main():
     """
     config = AppConfig()
     rssReader = RssReader(config.NETWORK_PROXY)
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(filename)s:%(lineno)d %(message)s')
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(filename)s:%(lineno)d %(message)s",
+    )
 
     try:
         with open("../data/rss_sources.json", "r", encoding="utf-8") as f:
