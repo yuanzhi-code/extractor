@@ -1,7 +1,8 @@
+from unittest.mock import Mock, patch
+
 import pytest
-from bs4 import BeautifulSoup
 import requests
-from unittest.mock import patch, Mock
+from bs4 import BeautifulSoup
 
 
 def test_extract_article():

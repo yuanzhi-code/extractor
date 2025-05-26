@@ -1,13 +1,9 @@
 from datetime import datetime
+
+from sqlalchemy import (Index, Integer, SmallInteger, String, UniqueConstraint,
+                        orm)
+
 from .base import Base
-from sqlalchemy import (
-    Index,
-    Integer,
-    SmallInteger,
-    String,
-    UniqueConstraint,
-    orm,
-)
 
 
 class tags(Base):

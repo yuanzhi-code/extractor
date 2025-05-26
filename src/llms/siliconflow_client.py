@@ -2,7 +2,8 @@
 硅基流动客户端实现
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 from openai import OpenAI
 
 
@@ -111,6 +112,7 @@ class SiliconFlowClient:
 
 if __name__ == "__main__":
     import os
+
     from dotenv import load_dotenv
 
     # 加载环境变量

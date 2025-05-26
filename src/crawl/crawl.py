@@ -1,9 +1,10 @@
 import asyncio
+import logging
 import re
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from crawl4ai import AsyncWebCrawler
 from crawl4ai.extraction_strategy import LLMExtractionStrategy
-import logging
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)

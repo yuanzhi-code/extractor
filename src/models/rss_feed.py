@@ -1,14 +1,9 @@
 from datetime import datetime
 from enum import IntEnum, StrEnum
 from typing import Optional
-from sqlalchemy import (
-    Index,
-    Integer,
-    SmallInteger,
-    String,
-    UniqueConstraint,
-    orm,
-)
+
+from sqlalchemy import (Index, Integer, SmallInteger, String, UniqueConstraint,
+                        orm)
 
 from models.base import Base
 

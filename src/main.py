@@ -1,14 +1,15 @@
-from datetime import datetime, timedelta
 import json
 import logging
 import time
+from datetime import datetime, timedelta
 
 from requests import RequestException, session
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
 from config.app_config import AppConfig
-from rss import RssReader
 from models import db
+from rss import RssReader
 
 
 def main():

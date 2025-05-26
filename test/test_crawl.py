@@ -1,6 +1,8 @@
-import pytest
 import asyncio
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
 from src.crawl.crawl import main
 
 
