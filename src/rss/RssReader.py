@@ -1,17 +1,17 @@
-import logging
-from sqlite3 import IntegrityError
-import feedparser
-from datetime import datetime
-from typing import List, Dict, Optional
 import html
-import os
-import requests
 import json  # 添加 json 模块导入
-import html2text
+import logging
+import os
+from datetime import datetime
+from sqlite3 import IntegrityError
+from typing import Dict, List, Optional
 
-from models import db
+import feedparser
+import html2text
+import requests
 from sqlalchemy.orm import Session
 
+from models import db
 from models.rss_entry import RssEntry
 from models.rss_feed import RssFeed
 
@@ -39,7 +39,7 @@ class RssReader:
             # 设置feedparser的代理
             feedparser.USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 
-    def _process_entry(self,feed_info: Dict[str,str], entry: Dict) -> Dict:
+    def _process_entry(self, feed_info: Dict[str, str], entry: Dict) -> Dict:
         """
         处理单个RSS条目，提取并转换字段
 
@@ -152,7 +152,9 @@ class RssReader:
 
         return feed_info
 
-    def get_entries(self, feed_info: Dict[str,str],limit: Optional[int] = None) -> List[Dict]:
+    def get_entries(
+        self, feed_info: Dict[str, str], limit: Optional[int] = None
+    ) -> List[Dict]:
         """
         获取RSS条目列表
 
@@ -165,11 +167,14 @@ class RssReader:
         if not self.entries:
             return []
 
-        return [self._process_entry(feed_info,entry) for entry in self.entries[:limit]]
+        return [
+            self._process_entry(feed_info, entry)
+            for entry in self.entries[:limit]
+        ]
 
     def get_entries_by_date(
         self,
-        feed_info: Dict[str,str],
+        feed_info: Dict[str, str],
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> List[Dict]:
@@ -194,5 +199,7 @@ class RssReader:
                 if (
                     start_date is None or published_datetime >= start_date
                 ) and (end_date is None or published_datetime <= end_date):
-                    filtered_entries.append(self._process_entry(entry))
+                    filtered_entries.append(
+                        self._process_entry(feed_info, entry)
+                    )
         return filtered_entries

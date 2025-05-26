@@ -1,5 +1,6 @@
 import logging
 import os
+
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 

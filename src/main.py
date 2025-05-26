@@ -1,14 +1,15 @@
-from datetime import datetime, timedelta
 import json
 import logging
 import time
+from datetime import datetime, timedelta
 
 from requests import RequestException, session
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
 from config.app_config import AppConfig
-from rss import RssReader
 from models import db
+from rss import RssReader
 
 
 def main():
@@ -64,8 +65,9 @@ def main():
                         f"本月的RSS条目 ({start_date.strftime('%Y-%m-%d')} 至 {end_date.strftime('%Y-%m-%d')}):"
                     )
                     entries = rssReader.get_entries_by_date(
-                        start_date=start_date, end_date=end_date
-                        ,feed_info=feed_info,
+                        start_date=start_date,
+                        end_date=end_date,
+                        feed_info=feed_info,
                     )
                     with open("output.json", "w", encoding="utf-8") as f:
                         json.dump(entries, f, ensure_ascii=False, indent=4)

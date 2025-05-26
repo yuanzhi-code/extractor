@@ -2,7 +2,8 @@
 Ollama client implementation using LiteLLM
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 import litellm
 from litellm import completion
 
