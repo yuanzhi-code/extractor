@@ -1,50 +1,89 @@
-# extractor
+# AI-Powered Content Aggregator
 
-## 项目介绍
+An intelligent content aggregation and analysis platform that automatically collects, processes, and generates insights from multiple sources.
 
-AI信息聚合器, 基于RSS做信息提取, 并产出每日报告。
+English | [简体中文](README_ZH.md)
 
-## 启动项目
+## Features
 
-```sh
-git clone git@github.com:yuanzhi-code/extractor.git
+### 🔄 Content Aggregation
+- Multi-source data collection (Twitter, WeChat, Podcasts, Videos)
+- Automatic content extraction and cleaning
+- Duplicate content detection
+- Support for RSS feeds
+
+### 🤖 AI Processing
+- Intelligent content tagging and categorization
+- Content quality scoring
+- Automated summarization
+- Sentiment analysis
+
+### 📊 Content Generation
+- Daily report generation
+- In-depth research report creation
+- Podcast script generation
+- Text-to-Speech conversion
+
+## Getting Started
+
+### Prerequisites
+```bash
+python >= 3.12
+```
+
+### Installation
+1. Clone the repository
+```bash
+git clone https://github.com/yourusername/extractor.git
 cd extractor
 ```
 
-###  安装 uv (如果尚未安装):
-
-推荐使用官方渠道进行安装
-
-```sh
-curl -LsSf https://astral.sh/uv/install.sh | sh
+2. Install dependencies
+```bash
+pip install -e .
 ```
 
-或者，你更习惯使用pip
-```sh
-pipx install uv # 或 pip install uv
+3. Configure your sources
+```bash
+cp data/rss_sources.json.example data/rss_sources.json
+# Edit rss_sources.json with your sources
 ```
 
-对于 MacOS, 也推荐使用 homebrew 安装
+### Usage
 
-```sh
-brew install uv
+TODO
+
+## Configuration
+
+### RSS Sources
+Add your RSS sources in `data/rss_sources.json`:
+```json
+{
+    "sources": [
+        {
+            "name": "Example Tech Blog",
+            "url": "https://example.com/feed",
+            "description": "Tech news and updates"
+        }
+    ]
+}
 ```
 
-### 创建虚拟环境:
-
-```sh
-uv venv
+### Environment Variables
+Create a `.env` file:
+```
+NETWORK_PROXY=http://your-proxy:port  # Optional
+AI_MODEL=your-preferred-model         # Optional
 ```
 
-### 激活虚拟环境:
+## Contributing
 
-```sh
-Linux / macOS: source .venv/bin/activate
-Windows (CMD): .venv\Scripts\activate.bat
-Windows (PowerShell): .venv\Scripts\Activate.ps1
-```
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Open a Pull Request
 
-### 安装依赖:
-```sh
-uv sync # or uv pip install -r requirements.txt
-```
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
