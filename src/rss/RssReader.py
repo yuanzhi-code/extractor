@@ -14,10 +14,10 @@ import requests
 import sqlalchemy
 from sqlalchemy.orm import Session
 
-from crawl.crawl import WebContentExtractor, scrape_sync
-from models import db
-from models.rss_entry import RssEntry
-from models.rss_feed import RssFeed
+from src.crawl import WebContentExtractor, scrape_sync
+from src.models import db
+from src.models.rss_entry import RssEntry
+from src.models.rss_feed import RssFeed
 
 
 class RssReader:

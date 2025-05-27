@@ -1,7 +1,7 @@
 import langgraph
 import langgraph.prebuilt
 
-from llms.factory import LLMFactory
+from src.llms.factory import LLMFactory
 
 
 def create_agent(

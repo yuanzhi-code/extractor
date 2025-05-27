@@ -22,6 +22,9 @@ class AppConfig(BaseSettings):
     DEEPSEEK_MODEL: str = Field(
         description="DeepSeek Model", default="deepseek-chat"
     )
+    SQLITE_URL: str = Field(
+        description="SQLite URL", default="sqlite:///app.db"
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"

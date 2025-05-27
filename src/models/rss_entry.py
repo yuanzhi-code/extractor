@@ -11,7 +11,7 @@ from sqlalchemy import (
     orm,
 )
 
-from models.base import Base
+from .base import Base
 
 
 class FeedStatus(IntEnum):

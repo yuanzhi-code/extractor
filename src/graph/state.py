@@ -1,7 +1,7 @@
-from langgraph.graph import MessageState
+from langgraph.graph import MessagesState
 
 
-class State(MessageState):
+class State(MessagesState):
     """
     State for the tagger node.
     """

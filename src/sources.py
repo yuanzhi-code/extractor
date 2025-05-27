@@ -1,4 +1,3 @@
-
 from datetime import datetime, timedelta
 import json
 import logging
@@ -9,6 +8,7 @@ from src.config.app_config import AppConfig
 from src.rss import RssReader
 
 logger = logging.getLogger(__name__)
+
 
 class Source:
     """
@@ -37,7 +37,7 @@ class Source:
             url=data["url"],
             description=data["description"],
         )
-    
+
     def parse(self, rss_reader: RssReader) -> list[dict]:
         # 添加重试机制
         # TODO: introduce backoff retry
@@ -91,6 +91,7 @@ class Source:
         # 在请求之间添加延时，避免请求过于频繁
         return []
 
+
 class SourceConfig:
     def __init__(self, source_path: str):
         with open(source_path, "r", encoding="utf-8") as f:
@@ -101,22 +102,21 @@ class SourceConfig:
     def from_dict(cls, data: dict):
         return [Source.from_dict(source) for source in data["sources"]]
 
-# if __name__ == "__main__": 
+
+# if __name__ == "__main__":
 def main():
     """
     entrypoint for fetch and parse source
     """
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(filename)s:%(lineno)d %(message)s",
-    )
+
     config = AppConfig()
     rss_reader = RssReader(config.NETWORK_PROXY)
-    
-    source_config = SourceConfig("../data/rss_sources.json")
+
+    source_config = SourceConfig("./data/rss_sources.json")
     for source in source_config.sources:
         source.parse(rss_reader)
         time.sleep(1)
+
 
 if __name__ == "__main__":
     main()

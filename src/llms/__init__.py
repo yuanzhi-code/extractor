@@ -1,5 +1,5 @@
 """
-model package for LLM interactions
+llms package
 """
 
 from .factory import LLMFactory
