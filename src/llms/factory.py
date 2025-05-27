@@ -8,7 +8,7 @@ class LLMFactory:
         "ollama": {
             "base_url": config.OLLAMA_URL,
             "model": config.OLLAMA_MODEL,
-            "api_key":"a"
+            "api_key": "a",  # localhost ollama does not need api key, but ChatOpenAI requires it
         },
         "siliconflow": {
             "base_url": "https://api.siliconflow.cn/v1",
@@ -28,7 +28,7 @@ class LLMFactory:
         cfg = self.get_llm_cfg(llm_type)
         if not cfg:
             raise ValueError(f"Unsupported LLM type: {llm_type}")
-        
+
         print(cfg)
 
         return ChatOpenAI(**cfg)

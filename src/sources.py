@@ -1,9 +1,10 @@
-from datetime import datetime, timedelta
 import json
 import logging
 import time
+from datetime import datetime, timedelta
 
 from requests import RequestException
+
 from src.config.app_config import AppConfig
 from src.rss import RssReader
 

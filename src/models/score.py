@@ -17,9 +17,7 @@ class EntryScore(Base):
     relevance_score: orm.Mapped[int] = orm.mapped_column(
         Integer(), nullable=False
     )
-    final_score: orm.Mapped[int] = orm.mapped_column(
-        Integer(), nullable=False
-    )
+    final_score: orm.Mapped[int] = orm.mapped_column(Integer(), nullable=False)
     created_at: orm.Mapped[datetime] = orm.mapped_column(
         DateTime(), nullable=False, default=datetime.now
     )

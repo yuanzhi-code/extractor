@@ -13,7 +13,7 @@ from src.prompts.prompts import get_prompt
 logger = logging.getLogger(__name__)
 
 
-def tagger_node(state: State) :
+def tagger_node(state: State):
     logger.info("tagger node")
     message = get_prompt("tagger")
     model_provider = config.MODEL_PROVIDER
@@ -29,13 +29,13 @@ def tagger_node(state: State) :
     response = llm.invoke(message)
     response.content = response.content.strip()
     # for some models, the response is wrapped in ```json, so we need to remove it
-    if response.content.startswith("```json") and response.content.endswith("```"):
-        response.content = response.content[len("```json"):-len("```")]
+    if response.content.startswith("```json") and response.content.endswith(
+        "```"
+    ):
+        response.content = response.content[len("```json") : -len("```")]
     with open("response.json", "w", encoding="utf-8") as f:
         f.write(response.content)
     logger.info(f"tagger node response: {response.pretty_print()}")
 
     # TODO(woxqaq): insert tags into database
-    return {
-        "result": response
-    }
+    return {"result": response}

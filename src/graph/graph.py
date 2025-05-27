@@ -1,13 +1,13 @@
 import logging
-from langgraph.graph import StateGraph
-from langgraph.graph import START, END
-from langchain_core.messages import HumanMessage
 
-from .tagger import tagger_node
+from langchain_core.messages import HumanMessage
+from langgraph.graph import END, START, StateGraph
 
 from .state import State
+from .tagger import tagger_node
 
 logger = logging.getLogger(__name__)
+
 
 def get_graph() -> StateGraph:
     """
@@ -19,15 +19,14 @@ def get_graph() -> StateGraph:
     builder.add_edge("tagger", END)
     return builder
 
+
 async def run_graph(content: str):
     if not content:
         raise ValueError("Content is required")
 
     graph = get_graph().compile()
-    
-    init_state= {
-        "messages": [{"role": "user", "content": content}]
-    }
+
+    init_state = {"messages": [{"role": "user", "content": content}]}
     async for s in graph.astream(input=init_state, stream_mode="values"):
         try:
             if isinstance(s, dict) and "message" in s:

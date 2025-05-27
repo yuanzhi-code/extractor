@@ -25,9 +25,7 @@ class AppConfig(BaseSettings):
     SQLITE_URL: str = Field(
         description="SQLite URL", default="sqlite:///app.db"
     )
-    MODEL_PROVIDER: str = Field(
-        description="Model Provider", default="ollama"
-    )
+    MODEL_PROVIDER: str = Field(description="Model Provider", default="ollama")
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
