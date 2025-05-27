@@ -1,4 +1,4 @@
-# AI-Powered Content Aggregator
+# Extractor
 
 An intelligent content aggregation and analysis platform that automatically collects, processes, and generates insights from multiple sources.
 
