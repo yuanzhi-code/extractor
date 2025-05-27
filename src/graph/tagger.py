@@ -10,7 +10,7 @@ from prompts.prompts import get_prompt
 logger = logging.getLogger(__name__)
 
 
-def tagger_node() -> Command[Literal["score"]]:
+def Tagger() -> Command[Literal["score"]]:
     logger.info("tagger node")
     message = get_prompt("tagger")
     llm = LLMFactory.get_llm("ollama")
