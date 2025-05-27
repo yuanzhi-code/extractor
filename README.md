@@ -16,7 +16,6 @@ English | [简体中文](README_ZH.md)
 - Intelligent content tagging and categorization
 - Content quality scoring
 - Automated summarization
-- Sentiment analysis
 
 ### 📊 Content Generation
 - Daily report generation
@@ -70,10 +69,10 @@ Add your RSS sources in `data/rss_sources.json`:
 ```
 
 ### Environment Variables
-Create a `.env` file:
+Refer the `.env.example` and c reate a `.env` file:
 ```
-NETWORK_PROXY=http://your-proxy:port  # Optional
-AI_MODEL=your-preferred-model         # Optional
+NETWORK_PROXY=http://your-proxy:port
+...
 ```
 
 ## Contributing
@@ -83,7 +82,3 @@ AI_MODEL=your-preferred-model         # Optional
 3. Commit your changes
 4. Push to the branch
 5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

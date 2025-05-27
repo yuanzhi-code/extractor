@@ -1,6 +1,6 @@
 # AI 智能内容聚合平台
 
-一个智能的内容聚合和分析平台，能够自动从多个来源收集、处理数据并生成洞察。
+一个智能的内容聚合和分析平台，能够自动从多个来源收集、处理数据并生成不同的摘要形式。
 
 [English](README.md) | 简体中文
 
@@ -16,7 +16,6 @@
 - 智能内容标签和分类
 - 内容质量评分
 - 自动摘要生成
-- 情感分析
 
 ### 📊 内容生成
 - 每日报告生成
@@ -70,10 +69,10 @@ TODO
 ```
 
 ### 环境变量
-创建 `.env` 文件：
+参考 `.src/.env.example` 创建 `.env` 文件：
 ```
-NETWORK_PROXY=http://your-proxy:port  # 可选
-AI_MODEL=your-preferred-model         # 可选
+NETWORK_PROXY=http://your-proxy:port  
+...
 ```
 
 ## 参与贡献
@@ -83,7 +82,3 @@ AI_MODEL=your-preferred-model         # 可选
 3. 提交你的改动
 4. 推送到分支
 5. 提交 Pull Request
-
-## 开源协议
-
-本项目采用 MIT 协议 - 查看 [LICENSE](LICENSE) 文件了解详情。 
