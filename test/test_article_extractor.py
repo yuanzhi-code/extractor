@@ -47,9 +47,7 @@ def test_extract_article():
 def test_extract_article_error_handling():
     """测试错误处理"""
     # 模拟请求失败
-    with patch(
-        "requests.get", side_effect=requests.RequestException("测试错误")
-    ):
+    with patch("requests.get", side_effect=requests.RequestException("测试错误")):
         from article_extractor import extract_article
 
         # 测试错误处理

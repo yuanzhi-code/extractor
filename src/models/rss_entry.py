@@ -1,10 +1,15 @@
 from datetime import datetime
-from enum import IntEnum, StrEnum
-from typing import Optional
+from enum import IntEnum
 
-from numpy import integer
-from sqlalchemy import (TEXT, Index, Integer, SmallInteger, String,
-                        UniqueConstraint, orm)
+from sqlalchemy import (
+    TEXT,
+    Index,
+    Integer,
+    SmallInteger,
+    String,
+    UniqueConstraint,
+    orm,
+)
 
 from models.base import Base
 

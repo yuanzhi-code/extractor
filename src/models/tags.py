@@ -1,7 +1,13 @@
 from datetime import datetime
 
-from sqlalchemy import (ForeignKey, Index, Integer, SmallInteger, String,
-                        UniqueConstraint, orm)
+from sqlalchemy import (
+    Index,
+    Integer,
+    SmallInteger,
+    String,
+    UniqueConstraint,
+    orm,
+)
 
 from .base import Base
 

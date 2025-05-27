@@ -5,6 +5,7 @@ Revises: f582b4ea3cae
 Create Date: 2025-05-27 16:47:30.381174
 
 """
+
 # isort: skip_file
 from typing import Sequence, Union
 
@@ -13,8 +14,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '47ba3cdb7085'
-down_revision: Union[str, None] = 'f582b4ea3cae'
+revision: str = "47ba3cdb7085"
+down_revision: Union[str, None] = "f582b4ea3cae"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

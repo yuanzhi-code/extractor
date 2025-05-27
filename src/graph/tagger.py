@@ -1,8 +1,8 @@
 import logging
 from typing import Literal
 
+from langchain_core.messages import AIMessage
 from langgraph.types import Command
-from langchain_core.messages import AIMessage 
 
 from llms.factory import LLMFactory
 from prompts.prompts import get_prompt
@@ -19,7 +19,5 @@ def tagger_node() -> Command[Literal["score"]]:
 
     # TODO(woxqaq): insert tags into database
     return Command(
-        update={
-            "message": AIMessage(content=response, name="tagger")
-        }
+        update={"message": AIMessage(content=response, name="tagger")}
     )

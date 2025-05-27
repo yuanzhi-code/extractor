@@ -23,6 +23,4 @@ def create_agent(
     model = LLMFactory().get_llm(llm_type)
 
     # 使用 langgraph 的预构建 react agent
-    return langgraph.prebuilt.create_react_agent(
-        name, model, tools, prompt
-    )
+    return langgraph.prebuilt.create_react_agent(name, model, tools, prompt)

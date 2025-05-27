@@ -1,5 +1,7 @@
 from datetime import datetime
+
 from sqlalchemy import orm
+
 from .base import Base
 
 
@@ -8,9 +10,7 @@ class EntryScore(Base):
     id: orm.Mapped[int] = orm.mapped_column(
         primary_key=True, autoincrement=True
     )
-    entry_id: orm.Mapped[int] = orm.mapped_column(
-        orm.Integer(), nullable=False
-    )
+    entry_id: orm.Mapped[int] = orm.mapped_column(orm.Integer(), nullable=False)
     quality_score: orm.Mapped[int] = orm.mapped_column(
         orm.Integer(), nullable=False
     )
