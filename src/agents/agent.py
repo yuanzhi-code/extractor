@@ -24,8 +24,5 @@ def create_agent(
 
     # 使用 langgraph 的预构建 react agent
     return langgraph.prebuilt.create_react_agent(
-        name,
-        model=model,
-        tools=tools,
-        prompt=prompt,
+        name, model, tools, prompt
     )
