@@ -33,13 +33,13 @@ python >= 3.12
 ### 安装步骤
 1. 克隆仓库
 ```bash
-git clone https://github.com/yourusername/extractor.git
+git clone https://github.com/yuanzhi-code/extractor.git
 cd extractor
 ```
 
-2. 安装依赖
+2. 初始化环境并安装项目依赖
 ```bash
-pip install -e .
+uv venv && uv sync
 ```
 
 3. 配置数据源
@@ -70,9 +70,13 @@ TODO
 
 ### 环境变量
 参考 `.src/.env.example` 创建 `.env` 文件：
-```
-NETWORK_PROXY=http://your-proxy:port  
-...
+
+为了使项目能正常运行，你至少需要配置 `MODEL_PROVIDER` 和相关的被列入`.env.example`的环境变量。比如，你选择 `deepseek` 作为模型提供商
+
+```bash
+MODEL_PROVIDER="deepseek"
+DEEPSEEK_API_KEY="sk-xxxxxxx"
+DEEPSEEK_MODEL="deepseek-chat"
 ```
 
 ## 参与贡献

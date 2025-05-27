@@ -33,13 +33,13 @@ python >= 3.12
 ### Installation
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/extractor.git
+git clone https://github.com/yuanzhi-code/extractor.git
 cd extractor
 ```
 
-2. Install dependencies
+2. init venv and install project dependencies
 ```bash
-pip install -e .
+uv venv && uv sync
 ```
 
 3. Configure your sources
@@ -70,9 +70,13 @@ Add your RSS sources in `data/rss_sources.json`:
 
 ### Environment Variables
 Refer the `.env.example` and c reate a `.env` file:
-```
-NETWORK_PROXY=http://your-proxy:port
-...
+
+To make the project run probably, you need to setup the `MODEL_PROVIDER` and relevant env showed in the `.env.example`,for example, you choose `deepseek` as model provider
+
+```bash
+MODEL_PROVIDER="deepseek"
+DEEPSEEK_API_KEY="sk-xxxxxxx"
+DEEPSEEK_MODEL="deepseek-chat"
 ```
 
 ## Contributing
