@@ -2,8 +2,9 @@ import argparse
 import asyncio
 import logging
 
-from src.config.app_config import AppConfig
+from src.config import config
 from src.graph.graph import run_graph
+from src.llms import LLMFactory
 from src.sources import main as sources_main
 
 logger = logging.Logger(__name__)
@@ -19,7 +20,8 @@ def main():
     """
     程序入口
     """
-    config = AppConfig()
+    if config.MODEL_PROVIDER not in LLMFactory.supported_llms:
+        raise ValueError(f"Invalid model provider: {config.MODEL_PROVIDER}")
     args = arg_parser().parse_args()
     logLevel = logging.INFO
     if args.debug:

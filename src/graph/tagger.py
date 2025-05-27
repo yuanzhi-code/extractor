@@ -1,9 +1,11 @@
+import json
 import logging
 from typing import Literal
 
 from langchain_core.messages import AIMessage
 from langgraph.types import Command
 
+from src.config import config
 from src.graph.state import State
 from src.llms.factory import LLMFactory
 from src.prompts.prompts import get_prompt
@@ -14,7 +16,8 @@ logger = logging.getLogger(__name__)
 def tagger_node(state: State) :
     logger.info("tagger node")
     message = get_prompt("tagger")
-    llm = LLMFactory().get_llm("ollama")
+    model_provider = config.MODEL_PROVIDER
+    llm = LLMFactory().get_llm(model_provider)
     message += [
         {
             "role": "user",
@@ -24,8 +27,13 @@ def tagger_node(state: State) :
         }
     ]
     response = llm.invoke(message)
-    print(response)
-    logger.info(f"tagger node response: {response}")
+    response.content = response.content.strip()
+    # for some models, the response is wrapped in ```json, so we need to remove it
+    if response.content.startswith("```json") and response.content.endswith("```"):
+        response.content = response.content[len("```json"):-len("```")]
+    with open("response.json", "w", encoding="utf-8") as f:
+        f.write(response.content)
+    logger.info(f"tagger node response: {response.pretty_print()}")
 
     # TODO(woxqaq): insert tags into database
     return {

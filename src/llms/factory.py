@@ -1,10 +1,9 @@
 from langchain_openai import ChatOpenAI
 
-from src.config.app_config import AppConfig
+from src.config import config
 
 
 class LLMFactory:
-    config = AppConfig()
     _factory_registry = {
         "ollama": {
             "base_url": config.OLLAMA_URL,
@@ -22,6 +21,8 @@ class LLMFactory:
             "api_key": config.DEEPSEEK_API_KEY,
         },
     }
+
+    supported_llms = _factory_registry.keys()
 
     def get_llm(self, llm_type: str):
         cfg = self.get_llm_cfg(llm_type)

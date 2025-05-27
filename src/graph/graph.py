@@ -25,7 +25,6 @@ async def run_graph(content: str):
 
     graph = get_graph().compile()
     
-    logger.info(f"Running graph with content: {content}")
     init_state= {
         "messages": [{"role": "user", "content": content}]
     }
