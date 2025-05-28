@@ -12,6 +12,8 @@ __pycache__/
 # program output
 output.*
 
+response*.json
+
 # Distribution / packaging
 .Python
 build/
