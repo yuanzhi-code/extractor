@@ -29,12 +29,12 @@ jobs:
 
     - name: Test migrations from empty database
       run: |
-        alembic upgrade head
+        uv run alembic upgrade head
 
     - name: Test migrations from current version to next version
       run: |
         rm -f app.db
         git checkout main
-        alembic upgrade head
+        uv run alembic upgrade head
         git checkout HEAD~1
-        alembic upgrade head
+        uv run alembic upgrade head
