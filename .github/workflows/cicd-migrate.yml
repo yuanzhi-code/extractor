@@ -9,7 +9,7 @@ on:
   pull_request:
     branches: [ main ]
     paths:
-      - 'alembic/**'
+      - 'src/migrate/**'
 
 jobs:
   test-migrations:
