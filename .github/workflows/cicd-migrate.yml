@@ -14,6 +14,19 @@ on:
 jobs:
   test-migrations:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test-case:
+          - name: "Empty database"
+            commands: |
+              uv run alembic upgrade head
+          - name: "Version upgrade"
+            commands: |
+              git fetch origin main
+              git checkout origin/main
+              uv run alembic upgrade head
+              git checkout HEAD~1
+              uv run alembic upgrade head
     
     steps:
     - uses: actions/checkout@v4
@@ -27,14 +40,5 @@ jobs:
       run: |
         uv sync
 
-    - name: Test migrations from empty database
-      run: |
-        uv run alembic upgrade head
-
-    - name: Test migrations from current version to next version
-      run: |
-        rm -f app.db
-        git checkout main
-        uv run alembic upgrade head
-        git checkout HEAD~1
-        uv run alembic upgrade head
+    - name: Run migration tests
+      run: ${{ matrix.test-case.commands }}
