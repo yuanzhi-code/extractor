@@ -28,7 +28,7 @@ def main():
     程序入口
     """
     config_validate()
-    
+
     args = arg_parser().parse_args()
     logLevel = logging.INFO
     if args.debug:
@@ -36,6 +36,10 @@ def main():
     logging.basicConfig(
         level=logLevel,
         format="%(asctime)s %(levelname)s %(filename)s:%(lineno)d %(message)s",
+        handlers=[
+            logging.FileHandler("app.log", encoding="utf-8"),  # 保存到文件
+            logging.StreamHandler(),  # 同时输出到控制台
+        ],
     )
     with open("./test.md", "r", encoding="utf-8") as f:
         content = f.read()
