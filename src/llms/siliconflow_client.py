@@ -108,28 +108,3 @@ class SiliconFlowClient:
             }
         except Exception as e:
             raise Exception(f"对话生成时发生错误: {str(e)}")
-
-
-if __name__ == "__main__":
-    import os
-
-    from dotenv import load_dotenv
-
-    # 加载环境变量
-    load_dotenv()
-
-    # 创建客户端实例
-    client = SiliconFlowClient(api_key=os.getenv("SILICONFLOW_API_KEY"))
-
-    # 单次生成
-    response = client.generate("你好，请介绍一下自己")
-    print("单次生成结果:", response)
-
-    # 多轮对话
-    messages = [
-        {"role": "user", "content": "你好"},
-        {"role": "assistant", "content": "你好！有什么我可以帮你的吗？"},
-        {"role": "user", "content": "请介绍一下你自己"},
-    ]
-    response = client.chat(messages)
-    print("多轮对话结果:", response)

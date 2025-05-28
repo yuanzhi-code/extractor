@@ -28,6 +28,7 @@ def main():
     程序入口
     """
     config_validate()
+    
     args = arg_parser().parse_args()
     logLevel = logging.INFO
     if args.debug:

@@ -3,6 +3,8 @@ from typing import Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+import dotenv
+dotenv.load_dotenv(dotenv_path=".env", override=True)
 
 class AppConfig(BaseSettings):
     NETWORK_PROXY: str = Field(
