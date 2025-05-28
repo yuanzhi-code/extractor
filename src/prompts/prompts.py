@@ -4,6 +4,7 @@ from typing import Dict, List
 
 def get_prompt(
     prompt_name: str,
+    model_name: str = None,
 ) -> List[Dict]:
     dir_name = os.path.dirname(__file__)
     try:
@@ -11,7 +12,12 @@ def get_prompt(
             return [
                 {
                     "role": "system",
-                    "content": f.read(),
+                    "content": (
+                        "/no_think\n"
+                        if model_name and "qwen3" in model_name.casefold()
+                        else ""
+                    )
+                    + f.read(),
                 }
             ]
     except Exception as e:

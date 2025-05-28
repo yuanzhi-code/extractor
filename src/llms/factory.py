@@ -36,9 +36,7 @@ class LLMFactory:
         if not cfg:
             raise ValueError(f"Unsupported LLM type: {llm_type}")
 
-        print(cfg)
-
-        return ChatOpenAI(**cfg)
+        return ChatOpenAI(**cfg, temperature=0.7)
 
     def _get_llm_cfg(self, llm_type: str):
         cfg = self._factory_registry.get(llm_type)
