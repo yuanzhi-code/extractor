@@ -32,7 +32,7 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
         response.content = response.content[len("```json") : -len("```")]
     with open("response-tagger.json", "w", encoding="utf-8") as f:
         f.write(response.content)
-    logger.info(f"tagger node response: {response.pretty_repr()}")
+    logger.info(f"tagger node response: \n{response.pretty_repr()}")
 
     # TODO(woxqaq): insert tags into database
     # return {"result": response, "next": "score"}

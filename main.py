@@ -28,8 +28,8 @@ def setup_logging():
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler('app.log')  # 输出到文件
-            # logging.StreamHandler()          # 输出到控制台
+            logging.FileHandler('app.log'),   # 输出到文件
+            logging.StreamHandler(),          # 输出到控制台
         ]
     )
 

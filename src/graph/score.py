@@ -31,7 +31,7 @@ def score_node(state: State):
     ))
     response = llm.invoke(messages)
     response.content = response.content.strip()
-    logger.info(f"score node response: {response.pretty_repr()}")
+    logger.info(f"score node response: \n{response.pretty_repr()}")
     if response.content.startswith("```json") and response.content.endswith("```"):
         response.content = response.content[len("```json") : -len("```")]
     with open("response-score.json", "w", encoding="utf-8") as f:
