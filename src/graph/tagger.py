@@ -42,7 +42,6 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
     logger.info(f"tagger node response_json: {response_json}")
     return Command(
         update={
-            "messages": [AIMessage(content=full_resp, name="tagger")],
             "category": response_json["name"],
         },
         goto="score",
