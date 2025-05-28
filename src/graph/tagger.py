@@ -18,11 +18,13 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
     messages = get_prompt("tagger")
     model_provider = config.MODEL_PROVIDER
     llm = LLMFactory().get_llm(model_provider)
-    messages.append(HumanMessage(
+    messages.append(
+        HumanMessage(
             f"""content which need to be tagged:
             {state['content']}
-            """)
+            """
         )
+    )
     response = llm.invoke(messages)
     response.content = response.content.strip()
     # for some models, the response is wrapped in ```json, so we need to remove it
@@ -30,16 +32,15 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
         "```"
     ):
         response.content = response.content[len("```json") : -len("```")]
-    with open("response-tagger.json", "w", encoding="utf-8") as f:
-        f.write(response.content)
     logger.info(f"tagger node response: \n{response.pretty_repr()}")
 
     # TODO(woxqaq): insert tags into database
     # return {"result": response, "next": "score"}
     response_json = json.loads(response.content)
+    category = response_json["name"]
+    if category == "other":
+        return Command(goto="__end__")
     return Command(
-        update={
-            "category": response_json["name"]
-        },
+        update={"category": category},
         goto="score",
     )

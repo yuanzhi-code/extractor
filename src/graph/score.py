@@ -2,6 +2,7 @@ import json
 import logging
 
 from langchain_core.messages import HumanMessage  # 新增导入
+
 from src.config import config
 from src.graph.state import State
 from src.llms.factory import LLMFactory
@@ -23,17 +24,19 @@ def score_node(state: State):
     messages = get_prompt("scorer")
     model_provider = config.MODEL_PROVIDER
     llm = LLMFactory().get_llm(model_provider)
-    messages.append(HumanMessage(
-        content=f"""
+    messages.append(
+        HumanMessage(
+            content=f"""
         content which need to be scored:
           {state['content']}
           """
-    ))
+        )
+    )
     response = llm.invoke(messages)
     response.content = response.content.strip()
     logger.info(f"score node response: \n{response.pretty_repr()}")
-    if response.content.startswith("```json") and response.content.endswith("```"):
+    if response.content.startswith("```json") and response.content.endswith(
+        "```"
+    ):
         response.content = response.content[len("```json") : -len("```")]
-    with open("response-score.json", "w", encoding="utf-8") as f:
-        f.write(response.content)
     return {"result": response}

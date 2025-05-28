@@ -22,15 +22,16 @@ def config_validate():
     if config.MODEL_PROVIDER not in LLMFactory.supported_llms:
         raise ValueError(f"Invalid model provider: {config.MODEL_PROVIDER}")
 
+
 def setup_logging():
     # 配置根日志
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
-            logging.FileHandler('app.log'),   # 输出到文件
-            logging.StreamHandler(),          # 输出到控制台
-        ]
+            logging.FileHandler("app.log"),  # 输出到文件
+            logging.StreamHandler(),  # 输出到控制台
+        ],
     )
 
 

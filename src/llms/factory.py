@@ -12,8 +12,8 @@ class LLMFactory:
         "ollama": {
             "base_url": config.OLLAMA_URL,
             "model": config.OLLAMA_MODEL,
-            "api_key": "a", 
-             "temperature": 0, # localhost ollama does not need api key, but ChatOpenAI requires it
+            "api_key": "a",
+            "temperature": 0,  # localhost ollama does not need api key, but ChatOpenAI requires it
         },
         "siliconflow": {
             "base_url": "https://api.siliconflow.cn/v1",
