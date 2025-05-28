@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 def tagger_node(state: State) -> Command[Literal["score"]]:
     logger.info("tagger node")
-    message = get_prompt("tagger")
     model_provider = config.MODEL_PROVIDER
     llm = LLMFactory().get_llm(model_provider)
+    message = get_prompt("tagger", model_name=llm.model_name)
     message += [
         {
             "role": "user",
@@ -35,10 +35,8 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
         response.content = response.content[len("```json") : -len("```")]
     with open("response-tagger.json", "w", encoding="utf-8") as f:
         f.write(response.content)
-    logger.info(f"tagger node response: {response.pretty_print()}")
 
     # TODO(woxqaq): insert tags into database
-    # return {"result": response, "next": "score"}
     full_resp = response.content
     response_json = json.loads(full_resp)
     logger.info(f"tagger node response_json: {response_json}")

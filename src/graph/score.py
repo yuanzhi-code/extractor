@@ -20,9 +20,9 @@ def score_node(state: State):
         # return {"result": "Invalid category"}
         raise ValueError("Invalid category")
 
-    message = get_prompt(f"scorer_{prev_category}")
     model_provider = config.MODEL_PROVIDER
     llm = LLMFactory().get_llm(model_provider)
+    message = get_prompt(f"scorer_{prev_category}", model_name=llm.model_name)
     message += [
         {
             "role": "user",

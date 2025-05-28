@@ -19,7 +19,7 @@
 
 ## 输出规范
 
-直接输出原始JSON格式，不要带"```json"。json的格式如下. 请注意，name字端必须为 tech, business, experience中的一个（使用英文），不要使用中文。
+直接输出原始JSON格式，不要带"```json"。json的格式如下. 请注意，name字段必须为 tech, business, experience中的一个（使用英文），不要使用中文。
 
 ```json
 {
