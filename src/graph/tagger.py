@@ -13,7 +13,7 @@ from src.prompts.prompts import get_prompt
 logger = logging.getLogger(__name__)
 
 
-def tagger_node(state: State):
+def tagger_node(state: State) -> Command[Literal["score"]]:
     logger.info("tagger node")
     message = get_prompt("tagger")
     model_provider = config.MODEL_PROVIDER
@@ -33,9 +33,19 @@ def tagger_node(state: State):
         "```"
     ):
         response.content = response.content[len("```json") : -len("```")]
-    with open("response.json", "w", encoding="utf-8") as f:
+    with open("response-tagger.json", "w", encoding="utf-8") as f:
         f.write(response.content)
     logger.info(f"tagger node response: {response.pretty_print()}")
 
     # TODO(woxqaq): insert tags into database
-    return {"result": response}
+    # return {"result": response, "next": "score"}
+    full_resp = response.content
+    response_json = json.loads(full_resp)
+    logger.info(f"tagger node response_json: {response_json}")
+    return Command(
+        update={
+            "messages": [AIMessage(content=full_resp, name="tagger")],
+            "category": response_json["name"],
+        },
+        goto="score",
+    )

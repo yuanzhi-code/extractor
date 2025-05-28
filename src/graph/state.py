@@ -6,4 +6,4 @@ class State(MessagesState):
     State for the tagger node.
     """
 
-    pass
+    category: str

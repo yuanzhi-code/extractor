@@ -3,8 +3,9 @@ import logging
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, StateGraph
 
-from .state import State
-from .tagger import tagger_node
+from src.graph.score import score_node
+from src.graph.state import State
+from src.graph.tagger import tagger_node
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,8 @@ def get_graph() -> StateGraph:
     builder = StateGraph(State)
     builder.add_edge(START, "tagger")
     builder.add_node("tagger", tagger_node)
-    builder.add_edge("tagger", END)
+    builder.add_node("score", score_node)
+    builder.add_edge("score", END)
     return builder
 
 
@@ -25,6 +27,11 @@ async def run_graph(content: str):
         raise ValueError("Content is required")
 
     graph = get_graph().compile()
+
+    # try:
+    #     print(graph.get_graph().draw_mermaid_png())
+    # except Exception as e:
+    #     logger.error(f"Error: {e}")
 
     init_state = {"messages": [{"role": "user", "content": content}]}
     async for s in graph.astream(input=init_state, stream_mode="values"):

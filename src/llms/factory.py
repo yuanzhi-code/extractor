@@ -1,6 +1,10 @@
+import logging
+
 from langchain_openai import ChatOpenAI
 
 from src.config import config
+
+logger = logging.getLogger(__name__)
 
 
 class LLMFactory:
@@ -25,7 +29,7 @@ class LLMFactory:
     supported_llms = _factory_registry.keys()
 
     def get_llm(self, llm_type: str):
-        cfg = self.get_llm_cfg(llm_type)
+        cfg = self._get_llm_cfg(llm_type)
         if not cfg:
             raise ValueError(f"Unsupported LLM type: {llm_type}")
 
@@ -33,6 +37,6 @@ class LLMFactory:
 
         return ChatOpenAI(**cfg)
 
-    def get_llm_cfg(self, llm_type: str):
+    def _get_llm_cfg(self, llm_type: str):
         cfg = self._factory_registry.get(llm_type)
         return cfg

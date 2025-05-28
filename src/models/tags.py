@@ -25,9 +25,7 @@ class Categories(Base):
         String(255), nullable=False
     )
 
-    __table_args__ = (
-        UniqueConstraint("name", name="uq_categories_name"),
-    )
+    __table_args__ = (UniqueConstraint("name", name="uq_categories_name"),)
 
 
 class EntriesCategories(Base):
