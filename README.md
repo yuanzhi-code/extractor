@@ -26,9 +26,8 @@ English | [简体中文](README_ZH.md)
 ## Getting Started
 
 ### Prerequisites
-```bash
-python >= 3.12
-```
+
+- uv installed
 
 ### Installation
 1. Clone the repository

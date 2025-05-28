@@ -12,9 +12,6 @@ __pycache__/
 # program output
 output.*
 
-# output of every node
-response*.json
-
 # Distribution / packaging
 .Python
 build/
