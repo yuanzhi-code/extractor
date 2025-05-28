@@ -15,8 +15,8 @@ def get_graph() -> StateGraph:
     Get the graph for the tagger node.
     """
     builder = StateGraph(State)
-    builder.add_edge(START, "tagger")
-    builder.add_node("tagger", tagger_node)
+    builder.add_edge(START, "score")
+    # builder.add_node("tagger", tagger_node)
     builder.add_node("score", score_node)
     builder.add_edge("score", END)
     return builder
@@ -33,7 +33,10 @@ async def run_graph(content: str):
     # except Exception as e:
     #     logger.error(f"Error: {e}")
 
-    init_state = {"content": content}
+    init_state = {
+                    "content": content,
+                    "category": "business"
+                 }
     async for s in graph.astream(input=init_state, stream_mode="values"):
         try:
             if isinstance(s, dict) and "message" in s:
