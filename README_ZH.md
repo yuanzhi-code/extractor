@@ -42,7 +42,12 @@ cd extractor
 uv venv && uv sync
 ```
 
-3. 配置数据源
+3. 初始化数据库
+```bash
+uv run alembic upgrade head
+```
+
+4. 配置数据源
 ```bash
 cp data/rss_sources.json.example data/rss_sources.json
 # 编辑 rss_sources.json 添加你的数据源

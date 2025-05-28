@@ -1,0 +1,41 @@
+name: Migration Tests
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/migrate/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/migrate/**'
+
+jobs:
+  test-migrations:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        curl -LsSf https://github.com/astral/uv/releases/latest/download/uv-installer.sh | sh
+        uv sync
+
+    - name: Test migrations from empty database
+      run: |
+        alembic upgrade head
+
+    - name: Test migrations from current version to next version
+      run: |
+        rm -f app.db
+        git checkout main
+        alembic upgrade head
+        git checkout HEAD~1
+        alembic upgrade head

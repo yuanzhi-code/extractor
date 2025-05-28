@@ -34,10 +34,10 @@ class User(Base):
 
 ## 步骤 2：自动生成迁移脚本
 
-1. 使用以下命令生成迁移脚本：
+1. 在项目根目录中使用以下命令生成迁移脚本：
 
    ```bash
-   alembic revision --autogenerate -m "<描述信息>"
+   uv run alembic revision --autogenerate -m "<描述信息>" 
    ```
 
    - `--autogenerate` 让 Alembic 检测模型变化，生成迁移脚本。
