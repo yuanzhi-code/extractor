@@ -15,8 +15,8 @@ def get_graph() -> StateGraph:
     Get the graph for the tagger node.
     """
     builder = StateGraph(State)
-    builder.add_edge(START, "score")
-    # builder.add_node("tagger", tagger_node)
+    builder.add_edge(START, "tagger")
+    builder.add_node("tagger", tagger_node)
     builder.add_node("score", score_node)
     builder.add_edge("score", END)
     return builder

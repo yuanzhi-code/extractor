@@ -20,7 +20,7 @@ def score_node(state: State):
         raise ValueError("Invalid category")
 
     # 修改: 使用 HumanMessage 构造消息
-    messages = get_prompt(f"scorer_{prev_category}")
+    messages = get_prompt("scorer")
     model_provider = config.MODEL_PROVIDER
     llm = LLMFactory().get_llm(model_provider)
     messages.append(HumanMessage(

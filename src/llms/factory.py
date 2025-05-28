@@ -35,7 +35,7 @@ class LLMFactory:
         cfg = self._get_llm_cfg(llm_type)
         if not cfg:
             raise ValueError(f"Unsupported LLM type: {llm_type}")
-
+        logger.info(f"Using LLM: {llm_type}/{cfg.get('model')}")
         return ChatOpenAI(**cfg)
 
     def _get_llm_cfg(self, llm_type: str):
