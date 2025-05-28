@@ -8,7 +8,7 @@ on:
   pull_request:
     branches: [ main ]
     paths:
-      - 'src/migrate/**'
+      - 'alembic/**'
 
 jobs:
   test-migrations:
@@ -17,15 +17,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v6
       with:
-        python-version: '3.12'
-        cache: 'pip'
+        version: "0.7.2"
 
     - name: Install dependencies
       run: |
-        curl -LsSf https://github.com/astral/uv/releases/latest/download/uv-installer.sh | sh
         uv sync
 
     - name: Test migrations from empty database
