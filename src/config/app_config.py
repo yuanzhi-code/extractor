@@ -16,7 +16,7 @@ class AppConfig(BaseSettings):
         description="SiliconFlow API Key", default=""
     )
     SILICONFLOW_MODEL: str = Field(
-        description="SiliconFlow Model", default="qwen3:4b"
+        description="SiliconFlow Model", default="Qwen/Qwen3-30B-A3B"
     )
     DEEPSEEK_API_KEY: str = Field(description="DeepSeek API Key", default="")
     DEEPSEEK_MODEL: str = Field(

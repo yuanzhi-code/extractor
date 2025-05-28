@@ -12,17 +12,20 @@ class LLMFactory:
         "ollama": {
             "base_url": config.OLLAMA_URL,
             "model": config.OLLAMA_MODEL,
-            "api_key": "a",  # localhost ollama does not need api key, but ChatOpenAI requires it
+            "api_key": "a", 
+             "temperature": 0, # localhost ollama does not need api key, but ChatOpenAI requires it
         },
         "siliconflow": {
             "base_url": "https://api.siliconflow.cn/v1",
             "model": config.SILICONFLOW_MODEL,
             "api_key": config.SILICONFLOW_API_KEY,
+            "temperature": 0,
         },
         "deepseek": {
             "base_url": "https://api.deepseek.com/v1",
             "model": config.DEEPSEEK_MODEL,
             "api_key": config.DEEPSEEK_API_KEY,
+            "temperature": 0,
         },
     }
 

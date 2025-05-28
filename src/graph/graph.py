@@ -33,7 +33,7 @@ async def run_graph(content: str):
     # except Exception as e:
     #     logger.error(f"Error: {e}")
 
-    init_state = {"messages": [{"role": "user", "content": content}]}
+    init_state = {"content": content}
     async for s in graph.astream(input=init_state, stream_mode="values"):
         try:
             if isinstance(s, dict) and "message" in s:
