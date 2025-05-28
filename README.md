@@ -42,7 +42,12 @@ cd extractor
 uv venv && uv sync
 ```
 
-3. Configure your sources
+3. Setup database
+```bash
+uv run alembic upgrade head
+```
+
+4. Configure your sources
 ```bash
 cp data/rss_sources.json.example data/rss_sources.json
 # Edit rss_sources.json with your sources

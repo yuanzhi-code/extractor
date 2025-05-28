@@ -1,0 +1,32 @@
+name: Migration Tests
+
+on:
+  push:
+    branches:
+      - '*'
+    paths:
+      - 'src/migrate/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/migrate/**'
+
+jobs:
+  test-migrations:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: "0.7.2"
+
+    - name: Install dependencies
+      run: |
+        uv sync
+
+    - name: Run migration tests
+      run: |
+        uv run alembic upgrade head
