@@ -2,7 +2,8 @@ name: Migration Tests
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - '*'
     paths:
       - 'src/migrate/**'
   pull_request:
