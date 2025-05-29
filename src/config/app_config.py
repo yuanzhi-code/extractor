@@ -21,6 +21,9 @@ class AppConfig(BaseSettings):
     SILICONFLOW_MODEL: str = Field(
         description="SiliconFlow Model", default="Qwen/Qwen3-30B-A3B"
     )
+    SILICONFLOW_EMBEDDING_MODEL: str = Field(
+        description="SiliconFlow Embedding Model", default="BAAI/bge-m3"
+    )
     DEEPSEEK_API_KEY: str = Field(description="DeepSeek API Key", default="")
     DEEPSEEK_MODEL: str = Field(
         description="DeepSeek Model", default="deepseek-chat"
