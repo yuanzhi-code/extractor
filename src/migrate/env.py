@@ -1,5 +1,5 @@
-from logging.config import fileConfig
 import os
+from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool, true
@@ -26,9 +26,6 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-def get_sqlite_url():
-    from src.config import config as AppConfig
-    return AppConfig.SQLALCHEMY_DATABASE_URI
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -42,8 +39,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    # url = config.get_main_option("sqlalchemy.url")
-    url = os.path.abspath(get_sqlite_url())
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,

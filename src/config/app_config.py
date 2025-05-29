@@ -1,7 +1,10 @@
 from typing import Optional
 
+import dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+dotenv.load_dotenv(dotenv_path=".env", override=True)
 
 
 class AppConfig(BaseSettings):
@@ -16,7 +19,7 @@ class AppConfig(BaseSettings):
         description="SiliconFlow API Key", default=""
     )
     SILICONFLOW_MODEL: str = Field(
-        description="SiliconFlow Model", default="qwen3:4b"
+        description="SiliconFlow Model", default="Qwen/Qwen3-30B-A3B"
     )
     DEEPSEEK_API_KEY: str = Field(description="DeepSeek API Key", default="")
     DEEPSEEK_MODEL: str = Field(

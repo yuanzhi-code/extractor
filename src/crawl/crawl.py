@@ -103,7 +103,9 @@ class WebContentExtractor:
 
             # 获取markdown内容
             markdown_content = (
-                result.markdown if hasattr(result, "markdown") else ""
+                result.markdown.fit_markdown
+                if hasattr(result, "markdown")
+                else ""
             )
 
             # 如果没有markdown内容，尝试从HTML转换

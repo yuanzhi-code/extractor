@@ -23,19 +23,24 @@ def config_validate():
         raise ValueError(f"Invalid model provider: {config.MODEL_PROVIDER}")
 
 
+def setup_logging():
+    # 配置根日志
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler("app.log"),  # 输出到文件
+            logging.StreamHandler(),  # 输出到控制台
+        ],
+    )
+
+
 def main():
     """
     程序入口
     """
     config_validate()
-    args = arg_parser().parse_args()
-    logLevel = logging.INFO
-    if args.debug:
-        logLevel = logging.DEBUG
-    logging.basicConfig(
-        level=logLevel,
-        format="%(asctime)s %(levelname)s %(filename)s:%(lineno)d %(message)s",
-    )
+    setup_logging()
     with open("./test.md", "r", encoding="utf-8") as f:
         content = f.read()
     asyncio.run(run_graph(content))
