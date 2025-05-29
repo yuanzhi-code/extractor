@@ -1,7 +1,7 @@
 import logging
 
-from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 
 from src.config import config
 
@@ -53,4 +53,3 @@ class LLMFactory:
             raise ValueError(f"Unsupported LLM type: {llm_type}")
         logger.info(f"Using Embedding Model: {llm_type}/{cfg.get('model')}")
         return OpenAIEmbeddings(**cfg)
-

@@ -21,6 +21,16 @@ file_handler.setFormatter(formatter)
 # 添加处理器到logger
 logger.addHandler(file_handler)
 
-from .graph import get_graph
+from .graph import get_tag_score_graph
+from .nodes import (
+    deduplicate_node,
+    score_node,
+    tagger_node,
+)
 
-__all__ = ["get_graph"]
+__all__ = [
+    "get_tag_score_graph",
+    "tagger_node",
+    "score_node",
+    "deduplicate_node",
+]
