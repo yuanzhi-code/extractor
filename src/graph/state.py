@@ -1,3 +1,5 @@
+from typing import List
+
 from typing_extensions import TypedDict
 
 
@@ -8,3 +10,11 @@ class State(TypedDict):
 
     content: str
     category: str
+
+
+class DeduplicateState(TypedDict):
+    """
+    State for the deduplicate node.
+    """
+
+    contents: List[str]

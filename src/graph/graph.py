@@ -3,6 +3,7 @@ import logging
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, StateGraph
 
+from src.graph.deduplicate import deduplicate_node
 from src.graph.score import score_node
 from src.graph.state import State
 from src.graph.tagger import tagger_node
@@ -19,6 +20,17 @@ def get_graph() -> StateGraph:
     builder.add_node("tagger", tagger_node)
     builder.add_node("score", score_node)
     builder.add_edge("score", END)
+    return builder
+
+
+def get_reporter_graph() -> StateGraph:
+    """
+    Get the graph for the reporter node.
+    """
+    builder = StateGraph(State)
+    builder.add_edge(START, "deduplicate")
+    builder.add_node("deduplicate", deduplicate_node)
+    builder.add_edge("deduplicate", END)
     return builder
 
 
