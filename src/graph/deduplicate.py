@@ -1,6 +1,9 @@
 import logging
+from typing import Dict, Literal
 
 from bertopic import BERTopic
+from langgraph.types import Command
+from pandas import DataFrame
 from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import CountVectorizer
 
@@ -69,8 +72,27 @@ stopwords = [
 ]
 
 
-def deduplicate_node(state: State):
-    docs = [state["content"]]
+def _get_representive_docs_(info: DataFrame) -> Dict[int, str]:
+    """
+    Arguments:
+        info: the result of get_document_info from bertopic model
+
+    Result:
+        a dict of docs id and the representative document sort by Topic id
+    """
+
+    return (
+        info[(info["Representative_document"] == True) & (info["Topic"] != -1)]
+        .sort_values("Probability", ascending=False)
+        .drop_duplicates(subset="Topic", keep="first")
+        .sort_values("Topic")
+        .filter(items=["Document"])["Document"]
+        .to_dict()
+    )
+
+
+def deduplicate_node(state: State) -> Command[Literal["score"]]:
+    docs = [state["contents"]]
     # embed_model = SentenceTransformer('all-MiniLM-L6-v2')
     embed_model = SentenceTransformer(model_name_or_path="moka-ai/m3e-base")
     pre_embeddings = embed_model.encode(docs, show_progress_bar=True)
@@ -86,6 +108,13 @@ def deduplicate_node(state: State):
     docs_to_topic, _ = bertopic_model.fit_transform(
         docs, embeddings=pre_embeddings
     )
-    topic_info = bertopic_model.get_topic_info()
-    logger.info("topic_info:\n{}", topic_info)
-    return state
+    docs_info = bertopic_model.get_document_info()
+    logger.debug("docs_info:\n{}", docs_info)
+    representative_docs = _get_representive_docs_(docs_info)
+    logger.debug("representative_docs:\n{}", representative_docs)
+
+    return Command(
+        update={
+            "deduplicated_contents": representative_docs
+        }
+    )

@@ -18,3 +18,4 @@ class DeduplicateState(TypedDict):
     """
 
     contents: List[str]
+    deduplicated_contents: dict[int, str]
