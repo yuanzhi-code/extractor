@@ -18,6 +18,17 @@ class Categories(IntEnum):
     EXPERIENCE = 3
     OTHER = 4
 
+    @staticmethod
+    def from_str(value: str) -> int:
+        if value.casefold() == "tech":
+            return Categories.TECH
+        elif value.casefold() == "business":
+            return Categories.BUSINESS
+        elif value.casefold() == "experience":
+            return Categories.EXPERIENCE
+        else:
+            raise ValueError(f"Invalid category: {value}")
+
 
 class EntriesCategories(Base):
     __tablename__ = "entries_categories"
