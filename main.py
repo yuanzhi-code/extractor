@@ -1,9 +1,10 @@
 import argparse
 import asyncio
 import logging
+from pathlib import Path
 
 from src.config import config
-from src.graph.graph import run_graph
+from src.graph.graph import run_graph, run_reporter_graph
 from src.llms import LLMFactory
 from src.sources import main as sources_main
 
@@ -41,9 +42,11 @@ def main():
     """
     config_validate()
     setup_logging()
-    with open("./test.md", "r", encoding="utf-8") as f:
-        content = f.read()
-    asyncio.run(run_graph(content))
+    contents = []
+    for md_file in Path("testdata").glob("*.md"):
+        with open(md_file, "r", encoding="utf-8") as f:
+            contents.append(f.read())
+    run_reporter_graph(contents)
 
 
 if __name__ == "__main__":

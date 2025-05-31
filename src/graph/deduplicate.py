@@ -7,7 +7,7 @@ from pandas import DataFrame
 from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import CountVectorizer
 
-from src.graph.state import State
+from src.graph.state import DeduplicateState, State
 
 logger = logging.getLogger(__name__)
 
@@ -91,30 +91,33 @@ def _get_representive_docs_(info: DataFrame) -> Dict[int, str]:
     )
 
 
-def deduplicate_node(state: State) -> Command[Literal["reporter"]]:
-    docs = [state["contents"]]
-    # embed_model = SentenceTransformer('all-MiniLM-L6-v2')
-    embed_model = SentenceTransformer(model_name_or_path="moka-ai/m3e-base")
+def deduplicate_node(state: DeduplicateState) -> Command[Literal["reporter"]]:
+    docs = state.get("contents")
+
+    # 如果文档数量太少，直接返回
+    if len(docs) < 2:
+        return Command(
+            update={"deduplicated_contents": {0: docs[0]} if docs else {}}
+        )
+
+    embed_model = SentenceTransformer("moka-ai/m3e-base")
     pre_embeddings = embed_model.encode(docs, show_progress_bar=True)
     vectorizer_model = CountVectorizer(stop_words=stopwords)
+
+    # 调整参数以适应小数据集
     bertopic_model = BERTopic(
         embedding_model=embed_model,
         vectorizer_model=vectorizer_model,
         language="chinese",
-        nr_topics=5,
-        top_n_words=5,
+        min_topic_size=2,  # 允许更小的主题
         verbose=True,
     )
     docs_to_topic, _ = bertopic_model.fit_transform(
         docs, embeddings=pre_embeddings
     )
-    docs_info = bertopic_model.get_document_info()
-    logger.debug("docs_info:\n{}", docs_info)
+    docs_info = bertopic_model.get_document_info(docs)
+    logger.info("docs_info:\n{}", docs_info)
     representative_docs = _get_representive_docs_(docs_info)
-    logger.debug("representative_docs:\n{}", representative_docs)
+    logger.info("representative_docs:\n{}", representative_docs)
 
-    return Command(
-        update={
-            "deduplicated_contents": representative_docs
-        }
-    )
+    return Command(update={"deduplicated_contents": representative_docs})
