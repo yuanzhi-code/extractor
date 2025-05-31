@@ -91,7 +91,7 @@ def _get_representive_docs_(info: DataFrame) -> Dict[int, str]:
     )
 
 
-def deduplicate_node(state: State) -> Command[Literal["score"]]:
+def deduplicate_node(state: State) -> Command[Literal["reporter"]]:
     docs = [state["contents"]]
     # embed_model = SentenceTransformer('all-MiniLM-L6-v2')
     embed_model = SentenceTransformer(model_name_or_path="moka-ai/m3e-base")
