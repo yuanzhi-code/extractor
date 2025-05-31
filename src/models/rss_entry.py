@@ -14,7 +14,7 @@ from sqlalchemy import (
 from .base import Base
 
 
-class FeedStatus(IntEnum):
+class EntryStatus(IntEnum):
     NOT_HANDLE = 0
     SUCCESS = 1
     FAIL = 2
@@ -62,5 +62,5 @@ class RssEntry(Base):
         Index("idx_rss_entry_published_at", "published_at"),
     )
 
-    def get_status(self) -> FeedStatus:
-        return FeedStatus[self.status]  # type: ignore
+    def get_status(self) -> EntryStatus:
+        return EntryStatus[self.status]  # type: ignore
