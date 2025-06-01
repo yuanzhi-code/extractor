@@ -137,10 +137,6 @@ class RssReader:
                 proxies = {"http": self.proxy, "https": self.proxy}
                 response = requests.get(url, proxies=proxies, timeout=10)
                 self.feed = feedparser.parse(response.content)
-
-                # 修改: 将 self.feed 转换为 JSON 字符串并写入文件
-                with open("output.json", "w", encoding="utf-8") as f:
-                    json.dump(self.feed, f, ensure_ascii=False, indent=4)
             else:
                 self.feed = feedparser.parse(url)
 
@@ -176,49 +172,6 @@ class RssReader:
         if feed_info["updated"] == "":
             # 使用 entry 的第一条的时间作为 updated time
             feed_info["updated"] = self.entries[0].get("published")
-
-        logging.info(f"Feed信息: {feed_info}")
-
-        with Session(db) as session:
-            rss_feed = (
-                session.query(RssFeed).filter_by(link=feed_info["link"]).first()
-            )
-            if rss_feed is not None:
-                feed_info["id"] = rss_feed.id
-                return feed_info
-
-            rss_feed = RssFeed(
-                title=feed_info["title"],
-                description=feed_info["description"],
-                link=feed_info["link"],
-                language=feed_info["language"],
-                updated=datetime.strptime(
-                    feed_info.get("updated", ""), "%a, %d %b %Y %H:%M:%S %z"
-                ),
-            )
-            try:
-                session.add(rss_feed)
-                session.commit()
-                session.refresh(rss_feed)
-                feed_info["id"] = rss_feed.id
-            except IntegrityError:
-                session.rollback()
-                logging.warning(f"RSS源已存在，跳过添加")
-                # 当RSS源已存在时，查询现有的feed_id
-                existing_feed = (
-                    session.query(RssFeed)
-                    .filter_by(link=feed_info["link"])
-                    .first()
-                )
-                if existing_feed:
-                    feed_info["id"] = existing_feed.id
-                else:
-                    logging.error(f"无法找到现有的RSS源: {feed_info['link']}")
-            except Exception as e:
-                session.rollback()
-                logging.error(f"Database error when adding RSS feed: {str(e)}")
-                # 这里可以选择重新抛出异常，因为没有feed_id会导致后续操作失败
-                raise
 
         return feed_info
 

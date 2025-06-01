@@ -31,3 +31,9 @@ class RssFeed(Base):
     updated: orm.Mapped[datetime] = orm.mapped_column()
 
     __table_args__ = (UniqueConstraint("link", name="uix_rss_feed_link"),)
+
+    def datetime_from_str(self, updated: str) -> datetime:
+        self.updated = datetime.strptime(updated, "%a, %d %b %Y %H:%M:%S %z")
+
+    def is_up_to_date(self, updated: str) -> bool:
+        return self.datetime_from_str(updated) == self.updated
