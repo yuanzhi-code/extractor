@@ -9,6 +9,7 @@ from src.graph.reporter import reporter_node
 from src.graph.score import score_node
 from src.graph.state import DeduplicateState, State
 from src.graph.tagger import tagger_node
+from src.models.rss_entry import RssEntry
 
 logger = logging.getLogger(__name__)
 
@@ -56,10 +57,7 @@ def run_reporter_graph(contents: List[str]):
             break
 
 
-async def run_graph(content: str):
-    if not content:
-        raise ValueError("Content is required")
-
+async def run_graph(entry: RssEntry):
     graph = get_classification_graph().compile()
 
     # try:
@@ -67,7 +65,7 @@ async def run_graph(content: str):
     # except Exception as e:
     #     logger.error(f"Error: {e}")
 
-    init_state = {"content": content, "category": "business"}
+    init_state = {"entry": entry}
     async for s in graph.astream(input=init_state, stream_mode="values"):
         try:
             if isinstance(s, dict) and "message" in s:

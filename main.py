@@ -6,7 +6,8 @@ from pathlib import Path
 from src.config import config
 from src.graph.graph import run_graph, run_reporter_graph
 from src.llms import LLMFactory
-from src.sources import main as sources_main
+from src.rss import RssReader
+from src.sources import SourceConfig, main as sources_main
 
 logger = logging.Logger(__name__)
 
