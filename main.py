@@ -48,4 +48,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    import uvicorn
+
+    uvicorn.run("src:app", reload=False, log_level="info")
