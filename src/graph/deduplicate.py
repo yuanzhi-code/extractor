@@ -7,7 +7,7 @@ from pandas import DataFrame
 from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import CountVectorizer
 
-from src.graph.state import DeduplicateState, State
+from src.graph.state import DeduplicateState
 
 logger = logging.getLogger(__name__)
 

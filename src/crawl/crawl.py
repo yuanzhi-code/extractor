@@ -4,7 +4,6 @@ import re
 from typing import Any, Dict, Optional
 
 from crawl4ai import AsyncWebCrawler
-from crawl4ai.extraction_strategy import LLMExtractionStrategy
 
 # 设置日志
 logger = logging.getLogger(__name__)

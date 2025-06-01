@@ -1,23 +1,18 @@
-import asyncio
 import html
-import json  # 添加 json 模块导入
 import logging
 import os
-import time
 from datetime import datetime
 from sqlite3 import IntegrityError
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import feedparser
 import html2text
 import requests
-import sqlalchemy
 from sqlalchemy.orm import Session
 
 from src.crawl import WebContentExtractor, scrape_sync
 from src.models import db
 from src.models.rss_entry import RssEntry
-from src.models.rss_feed import RssFeed
 
 
 class RssReader:
@@ -152,7 +147,14 @@ class RssReader:
             logging.error(f"解析RSS源时发生错误: {str(e)}")
             return False
 
-    def get_feed_info(self) -> Dict[str, str]:
+    def update_feed_info(
+        self, property: str, value: Any, feed_info: Optional[Dict]
+    ):
+        if feed_info is not None:
+            self.feed = feed_info
+        self.feed[property] = value
+
+    def get_feed_info(self) -> Optional[Dict[str, str]]:
         """
         获取RSS源的基本信息
 
@@ -160,7 +162,7 @@ class RssReader:
             Dict: 包含RSS源信息的字典
         """
         if not self.feed:
-            return {}
+            return None
         feed_info = {
             "title": html.unescape(self.feed.get("title", "")),
             "description": html.unescape(self.feed.get("description", "")),
@@ -197,7 +199,7 @@ class RssReader:
 
     def get_entries_by_date(
         self,
-        feed_info: Dict[str, str],
+        feed_info: Optional[Dict[str, str]] = get_feed_info(),
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> List[Dict]:
