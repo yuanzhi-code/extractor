@@ -42,7 +42,6 @@ class Source:
             description=data["description"],
         )
 
-
     def _get_or_insert_feed(self, feed_info: dict):
         """
         get feed info from database, if not found, insert it from input dict.
@@ -181,9 +180,7 @@ class SourceConfig:
     def __init__(self, source_path: str):
         with open(source_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        self.sources = [
-            Source.from_dict(source) for source in data["sources"]
-        ]
+        self.sources = [Source.from_dict(source) for source in data["sources"]]
 
     @classmethod
     def from_dict(cls, data: dict):

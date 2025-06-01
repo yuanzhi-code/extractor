@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 import time
@@ -8,8 +7,8 @@ from src.graph.graph import run_graph
 from src.rss.rss_reader import RssReader
 from src.sources import SourceConfig
 
-
 logger = logging.getLogger(__name__)
+
 
 async def consumer(task_queue: asyncio.Queue):
     while True:
