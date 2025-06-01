@@ -116,8 +116,7 @@ def deduplicate_node(state: DeduplicateState) -> Command[Literal["reporter"]]:
         docs, embeddings=pre_embeddings
     )
     docs_info = bertopic_model.get_document_info(docs)
-    logger.info("docs_info:\n{}", docs_info)
     representative_docs = _get_representive_docs_(docs_info)
-    logger.info("representative_docs:\n{}", representative_docs)
+    logger.info(f"representative docs {representative_docs}")
 
     return Command(update={"deduplicated_contents": representative_docs})

@@ -19,6 +19,7 @@
             "console": "integratedTerminal",
             "env": {
                 "HF_ENDPOINT": "https://hf-mirror.com",
+                "HTTPS_PROXY":"127.0.0.1:7890"
             }
         }
     ]
