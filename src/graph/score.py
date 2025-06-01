@@ -1,11 +1,17 @@
 import json
 import logging
+from turtle import goto
 
 from langchain_core.messages import HumanMessage  # 新增导入
+from langgraph.types import Command
+from sqlalchemy.orm import Session
 
 from src.config import config
+from src.graph._utils import get_response_property, pretty_response
 from src.graph.state import State
 from src.llms.factory import LLMFactory
+from src.models import db
+from src.models.score import EntryScore
 from src.prompts.prompts import get_prompt
 
 logger = logging.getLogger(__name__)
@@ -28,15 +34,25 @@ def score_node(state: State):
         HumanMessage(
             content=f"""
         content which need to be scored:
-          {state['content']}
+          {state.entry_content}
           """
         )
     )
     response = llm.invoke(messages)
-    response.content = response.content.strip()
+    pretty_response(response)
     logger.info(f"score node response: \n{response.pretty_repr()}")
-    if response.content.startswith("```json") and response.content.endswith(
-        "```"
-    ):
-        response.content = response.content[len("```json") : -len("```")]
+    score = get_response_property(response, "tag")
+
+    with Session(db) as session:
+        _score = {
+            "entry_id": state.entry_id,
+            "score": score,
+        }
+        try:
+            session.add(EntryScore(_score))
+            session.commit()
+        except Exception as e:
+            session.rollback()
+    if score == "noise":
+        return Command(goto="__end__")
     return {"result": response}

@@ -12,6 +12,7 @@ from sqlalchemy import (
 
 from .base import Base
 
+
 class Categories(IntEnum):
     TECH = 1
     BUSINESS = 2

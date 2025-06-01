@@ -3,6 +3,9 @@ import logging
 import time
 from datetime import datetime, timedelta
 
+import backoff
+import requests
+from narwhals import Datetime
 from requests import RequestException
 
 from src.config.app_config import AppConfig
@@ -39,56 +42,34 @@ class Source:
             description=data["description"],
         )
 
+    @backoff.on_exception(
+        backoff.expo, requests.RequestException, max_time=30, max_retries=3
+    )
     def parse(self, rss_reader: RssReader) -> list[dict]:
         # 添加重试机制
         # TODO: introduce backoff retry
-        max_retries = 3
-        retry_delay = 5  # 秒
-        for attempt in range(max_retries):
-            try:
-                if rss_reader.parse_feed(self.url):
-                    feed_info = rss_reader.get_feed_info()
-                    logger.info(f"Feed标题: {feed_info['title']}")
-                    logger.info(f"Feed描述: {feed_info['description']}")
-                    logger.info(f"Feed链接: {feed_info['link']}")
-                    logger.info(f"Feed语言: {feed_info['language']}")
-                    logger.info(f"最后更新: {feed_info['updated']}")
-                    logger.info("-" * 50)
+        if rss_reader.parse_feed(self.url):
+            feed_info = rss_reader.get_feed_info()
+            logger.info(f"Feed标题: {feed_info['title']}")
+            logger.info(f"Feed描述: {feed_info['description']}")
+            logger.info(f"Feed链接: {feed_info['link']}")
+            logger.info(f"Feed语言: {feed_info['language']}")
+            logger.info(f"最后更新: {feed_info['updated']}")
+            logger.info("-" * 50)
+            today = datetime.today()
+            start_date = datetime(today.year, today.month, 1)
+            end_date = datetime(today.year, today.month, 1) + timedelta(days=31)
+            end_date = end_date.replace(day=1) - timedelta(days=1)
+            logger.info(
+                f"本月的RSS条目 ({start_date.strftime('%Y-%m-%d')} 至 {end_date.strftime('%Y-%m-%d')}):"
+            )
+            entries = rss_reader.get_entries_by_date(
+                start_date=start_date,
+                end_date=end_date,
+                feed_info=feed_info,
+            )
 
-                    today = datetime.today()
-                    start_date = datetime(today.year, today.month, 1)
-                    end_date = datetime(today.year, today.month, 1) + timedelta(
-                        days=31
-                    )
-                    end_date = end_date.replace(day=1) - timedelta(days=1)
-                    logger.info(
-                        f"本月的RSS条目 ({start_date.strftime('%Y-%m-%d')} 至 {end_date.strftime('%Y-%m-%d')}):"
-                    )
-                    entries = rss_reader.get_entries_by_date(
-                        start_date=start_date,
-                        end_date=end_date,
-                        feed_info=feed_info,
-                    )
-
-                    return entries
-
-                else:
-                    logger.warning(
-                        f"解析RSS源失败 (尝试 {attempt + 1}/{max_retries})"
-                    )
-                    if attempt < max_retries - 1:
-                        logging.warning(f"等待 {retry_delay} 秒后重试...")
-                        time.sleep(retry_delay)
-            except RequestException as e:
-                logger.warning(
-                    f"网络请求错误 (尝试 {attempt + 1}/{max_retries}): {str(e)}"
-                )
-                if attempt < max_retries - 1:
-                    logger.warning(f"等待 {retry_delay} 秒后重试...")
-                    time.sleep(retry_delay)
-            except Exception as e:
-                logger.error(f"发生未知错误: {str(e)}")
-                break
+            return entries
         # 在请求之间添加延时，避免请求过于频繁
         return []
 

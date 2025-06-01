@@ -13,7 +13,7 @@ from src.graph.tagger import tagger_node
 logger = logging.getLogger(__name__)
 
 
-def get_graph() -> StateGraph:
+def get_classification_graph() -> StateGraph:
     """
     Get the graph for the tagger node.
     """
@@ -60,7 +60,7 @@ async def run_graph(content: str):
     if not content:
         raise ValueError("Content is required")
 
-    graph = get_graph().compile()
+    graph = get_classification_graph().compile()
 
     # try:
     #     print(graph.get_graph().draw_mermaid_png())

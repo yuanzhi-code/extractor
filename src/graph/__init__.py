@@ -21,6 +21,16 @@ file_handler.setFormatter(formatter)
 # 添加处理器到logger
 logger.addHandler(file_handler)
 
-from .graph import get_graph, get_reporter_graph, run_graph, run_reporter_graph
+from .graph import (
+    get_classification_graph,
+    get_reporter_graph,
+    run_graph,
+    run_reporter_graph,
+)
 
-__all__ = ["get_graph", "get_reporter_graph", "run_graph", "run_reporter_graph"]
+__all__ = [
+    "get_classification_graph",
+    "get_reporter_graph",
+    "run_graph",
+    "run_reporter_graph",
+]

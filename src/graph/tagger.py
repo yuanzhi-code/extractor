@@ -4,10 +4,14 @@ from typing import Literal
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.types import Command
+from sqlalchemy.orm import Session
 
 from src.config import config
+from src.graph._utils import get_response_property, pretty_response
 from src.graph.state import State
 from src.llms.factory import LLMFactory
+from src.models import db
+from src.models.tags import EntriesCategories
 from src.prompts.prompts import get_prompt
 
 logger = logging.getLogger(__name__)
@@ -21,23 +25,28 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
     messages.append(
         HumanMessage(
             f"""content which need to be tagged:
-            {state['content']}
+            {state.entry_content}
             """
         )
     )
     response = llm.invoke(messages)
-    response.content = response.content.strip()
-    # for some models, the response is wrapped in ```json, so we need to remove it
-    if response.content.startswith("```json") and response.content.endswith(
-        "```"
-    ):
-        response.content = response.content[len("```json") : -len("```")]
+    pretty_response(response)
     logger.info(f"tagger node response: \n{response.pretty_repr()}")
 
-    # TODO(woxqaq): insert tags into database
-    # return {"result": response, "next": "score"}
-    response_json = json.loads(response.content)
-    category = response_json["name"]
+    category = get_response_property(response, "name")
+    with Session(db) as session:
+        try:
+            _category = EntriesCategories(
+                {
+                    "entry_id": state.entry_id,
+                    "category": category,
+                }
+            )
+            session.add(_category)
+            session.flush(_category)
+            session.commit()
+        except Exception as e:
+            session.rollback()
     if category == "other":
         return Command(goto="__end__")
     return Command(
