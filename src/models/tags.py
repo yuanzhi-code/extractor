@@ -4,9 +4,6 @@ from enum import IntEnum
 from sqlalchemy import (
     Index,
     Integer,
-    SmallInteger,
-    String,
-    UniqueConstraint,
     orm,
 )
 
