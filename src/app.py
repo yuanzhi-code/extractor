@@ -1,21 +1,10 @@
-from flask import Flask
 
-from src.config import config
-
-
-class App(Flask):
-    pass
+from fastapi import FastAPI
 
 
-def create_app() -> App:
-    app = Flask(__name__)
-    app.config = config
-    return app
+app = FastAPI()
 
 
-app = create_app()
-
-
-@app.route("/")
-def index():
+@app.get("/")
+async def index():
     return "hello world"
