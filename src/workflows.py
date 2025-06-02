@@ -57,7 +57,9 @@ async def fetch_task(max_workers: int = 10):
             today = datetime.datetime.today()
             _e = (
                 session.query(RssEntry)
-                .filter(RssEntry.published_at >= today - datetime.timedelta(days=7))
+                .filter(
+                    RssEntry.published_at >= today - datetime.timedelta(days=7)
+                )
                 .join(EntryCategory, RssEntry.id == EntryCategory.entry_id)
                 .all()
             )

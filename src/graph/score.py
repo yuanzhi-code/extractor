@@ -9,6 +9,7 @@ from src.graph._utils import get_response_property, pretty_response
 from src.graph.state import State
 from src.llms.factory import LLMFactory
 from src.models import db
+from src.models.entry_summary import EntrySummary
 from src.models.score import EntryScore
 from src.prompts.prompts import get_prompt
 
@@ -40,6 +41,7 @@ def score_node(state: State):
     pretty_response(response)
     logger.info(f"score node response: \n{response.pretty_repr()}")
     score = get_response_property(response, "tag")
+    summary = get_response_property(response, "summary")
 
     with Session(db) as session:
         _score = {
@@ -47,6 +49,9 @@ def score_node(state: State):
             "score": score,
         }
         session.add(EntryScore(_score))
+        session.add(
+            EntrySummary(entry_id=state["entry"].get("id"), summary=summary)
+        )
     if score == "noise":
         return Command(goto="__end__")
     return {"result": response}
