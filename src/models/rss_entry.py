@@ -17,7 +17,8 @@ from .base import Base
 class EntryStatus(IntEnum):
     NOT_HANDLE = 0
     SUCCESS = 1
-    FAIL = 2
+    HAS_BEEN_TAGGED = 2
+    FAIL = 3
 
 
 class RssEntry(Base):

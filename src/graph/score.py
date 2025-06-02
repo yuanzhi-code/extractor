@@ -32,7 +32,7 @@ def score_node(state: State):
         HumanMessage(
             content=f"""
         content which need to be scored:
-          {state.entry_content}
+          {state['entry'].get('content')}
           """
         )
     )
@@ -43,7 +43,7 @@ def score_node(state: State):
 
     with Session(db) as session:
         _score = {
-            "entry_id": state.entry_id,
+            "entry_id": state["entry"].get("id"),
             "score": score,
         }
         try:

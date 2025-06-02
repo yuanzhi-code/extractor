@@ -24,7 +24,7 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
     messages.append(
         HumanMessage(
             f"""content which need to be tagged:
-            {state['entry'].content}
+            {state['entry'].get('content')}
             """
         )
     )
@@ -37,12 +37,11 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
         try:
             _category = EntriesCategories(
                 {
-                    "entry_id": state["entry"].id,
+                    "entry_id": state["entry"].get("id"),
                     "category": category,
                 }
             )
             session.add(_category)
-            session.flush(_category)
             session.commit()
         except Exception as e:
             session.rollback()
