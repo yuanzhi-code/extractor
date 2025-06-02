@@ -199,7 +199,7 @@ class RssReader:
 
     def get_entries_by_date(
         self,
-        feed_info: Optional[Dict[str, str]] = get_feed_info(),
+        feed_info: Optional[Dict[str, str]],
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> List[Dict]:

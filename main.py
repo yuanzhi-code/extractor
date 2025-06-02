@@ -2,9 +2,14 @@ import argparse
 import logging
 from pathlib import Path
 
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+import uvicorn
+
 from src.config import config
 from src.graph.graph import run_reporter_graph
 from src.llms import LLMFactory
+from src.workflows import fetch_task
 
 logger = logging.Logger(__name__)
 
@@ -33,7 +38,6 @@ def setup_logging():
         ],
     )
 
-
 def main():
     """
     程序入口
@@ -48,7 +52,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
-    import uvicorn
-
-    uvicorn.run("src:app", reload=False, log_level="info")
+    setup_logging()
+    uvicorn.run("src.app:app", reload=False, log_level="info")
