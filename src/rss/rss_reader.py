@@ -10,7 +10,6 @@ import requests
 
 from src.crawl import WebContentExtractor, scrape_sync
 
-
 class RssReader:
     # TODO(woxqaq): add cache for feeds and entries
     def __init__(self, proxy: Optional[str] = None):
@@ -52,6 +51,7 @@ class RssReader:
             "published": entry.get("published", ""),
             "summary": html.unescape(entry.get("summary", "")),
             "author": html.unescape(entry.get("author", "")),
+            "status": 0,
             "content": (
                 self.html2markdown.handle(
                     html.unescape(
@@ -63,10 +63,6 @@ class RssReader:
             ),
         }
 
-        # # TODO(woxqaq): crawl api is too slow, we should use a better way to get the content
-        # if entry.get("content").strip() == "" and entry.get("link") != "":
-        #     content = scrape_sync(entry.get("link")).get("content")
-        #     entry["content"] = content
         return entry
 
     def parse_feed(self, url: str) -> bool:

@@ -97,6 +97,8 @@ class Source:
                 session.rollback()
                 logger.error(f"Error inserting feed: {e}")
                 raise
+            finally:
+                session.close()
 
     async def _crawl_entry(self, entries: List[dict]):
         """

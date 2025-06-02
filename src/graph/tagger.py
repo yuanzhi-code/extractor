@@ -10,7 +10,8 @@ from src.graph._utils import get_response_property, pretty_response
 from src.graph.state import State
 from src.llms.factory import LLMFactory
 from src.models import db
-from src.models.tags import EntriesCategories
+from src.models.rss_entry import RssEntry
+from src.models.tags import EntryCategory
 from src.prompts.prompts import get_prompt
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,18 @@ logger = logging.getLogger(__name__)
 
 def tagger_node(state: State) -> Command[Literal["score"]]:
     logger.info("tagger node start")
+    with Session(db) as session:
+        entry_category = (
+            session.query(EntryCategory)
+            .filter(EntryCategory.entry_id == state["entry"].get("id"))
+            .first()
+        )
+        # 已存在分类，直接跳过
+        if entry_category:
+            logger.info(f"entry {state['entry'].get('id')} has been tagged")
+            return Command(goto="score")
+        session.close()
+
     messages = get_prompt("tagger")
     model_provider = config.MODEL_PROVIDER
     llm = LLMFactory().get_llm(model_provider)
@@ -35,7 +48,7 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
     category = get_response_property(response, "name")
     with Session(db) as session:
         try:
-            _category = EntriesCategories(
+            _category = EntryCategory(
                 {
                     "entry_id": state["entry"].get("id"),
                     "category": category,

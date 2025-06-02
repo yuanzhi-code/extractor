@@ -8,10 +8,9 @@ from sqlalchemy.orm import Session
 from src.config import config
 from src.graph.graph import run_graph
 from src.models import db
-from src.models.rss_entry import EntryStatus, RssEntry
+from src.models.rss_entry import RssEntry
 from src.rss.rss_reader import RssReader
 from src.sources import SourceConfig
-from src.utils.time import parse_feed_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -57,10 +56,7 @@ async def fetch_task(max_workers: int = 10):
         today = datetime.datetime.today()
         _e = (
             session.query(RssEntry)
-            .filter(
-                RssEntry.published_at >= today - datetime.timedelta(days=7)
-            )
-            .filter(RssEntry.get_status != EntryStatus.SUCCESS)
+            .filter(RssEntry.published_at >= today - datetime.timedelta(days=7))
             .all()
         )
         session.close()
