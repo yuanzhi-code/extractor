@@ -4,9 +4,11 @@ from sqlalchemy import create_engine
 
 from src.config import config
 
+
 def get_db_url():
     sqlite_path = os.path.abspath(config.SQLITE_URL)
     return f"sqlite:///{sqlite_path}"
+
 
 def get_db():
     """

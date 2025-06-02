@@ -1,8 +1,8 @@
-from contextlib import asynccontextmanager
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 import logging
+from contextlib import asynccontextmanager
 
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 
 from src.models import get_db_url
@@ -17,9 +17,12 @@ async def lifespan(app: FastAPI):
         {"default": SQLAlchemyJobStore(url=get_db_url())}
     )
     scheduler.add_job(
-        sample_task,
+        # sample_task,
+        fetch_task,
         "interval",
-        hours=2,
+        # hours=2,
+        seconds=10,
+        # minutes=1,
         id="tagger task",
     )
     scheduler.start()
@@ -27,7 +30,9 @@ async def lifespan(app: FastAPI):
     yield
     scheduler.shutdown()
 
+
 app = FastAPI(lifespan=lifespan)
+
 
 @app.get("/")
 async def index():

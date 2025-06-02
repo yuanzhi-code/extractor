@@ -11,13 +11,21 @@ logger = logging.getLogger(__name__)
 
 
 async def consumer(task_queue: asyncio.Queue):
-    while True:
-        entry = await task_queue.get()
-        if entry is None:
-            break
-        logger.info(f"Processing entry: {entry.id}")
-        await run_graph(entry)
-        task_queue.task_done()
+    try:
+        while True:
+            entry = await task_queue.get()
+            if entry is None:
+                break
+            try:
+                logger.info(f"Processing entry: {entry.get('title', '')}")
+                await run_graph(entry)
+            except Exception as e:
+                logger.error(f"Error processing entry: {e}")
+            finally:
+                task_queue.task_done()
+    except asyncio.CancelledError:
+        logger.info("Consumer task cancelled")
+        raise
 
 
 # if __name__ == "__main__":
@@ -25,30 +33,47 @@ async def fetch_task(max_workers: int = 10):
     """
     entrypoint for fetch and parse source
     """
+    try:
+        rss_reader = RssReader(config.NETWORK_PROXY)
 
-    rss_reader = RssReader(config.NETWORK_PROXY)
+        source_config = SourceConfig("./data/rss_sources.json")
+        entries = []
+        for source in source_config.sources:
+            try:
+                new_entries = await source.parse(rss_reader)
+                logger.info(
+                    f"Fetched {len(new_entries)} entries from {source.name}"
+                )
+                entries.extend(new_entries)
+            except Exception as e:
+                logger.error(f"Error parsing source {source.name}: {e}")
 
-    source_config = SourceConfig("./data/rss_sources.json")
-    entries = []
-    for source in source_config.sources:
-        entries.extend(source.parse(rss_reader))
+        if not entries:
+            logger.info("No new entries to process")
+            return
 
-    task_queue = asyncio.Queue()
-    for entry in entries:
-        await task_queue.put(entry)
+        task_queue = asyncio.Queue()
+        for entry in entries:
+            await task_queue.put(entry)
 
-    logger.info(f"Starting {max_workers} workers")
-    workers = [
-        asyncio.create_task(consumer(task_queue)) for _ in range(max_workers)
-    ]
-    start_time = time.time()
+        logger.info(f"Starting {max_workers} workers")
+        workers = [
+            asyncio.create_task(consumer(task_queue))
+            for _ in range(max_workers)
+        ]
+        start_time = time.time()
 
-    await task_queue.join()
+        try:
+            await task_queue.join()
+        finally:
+            # 取消所有worker
+            for worker in workers:
+                worker.cancel()
+            # 等待所有worker完成
+            await asyncio.gather(*workers, return_exceptions=True)
 
-    for worker in workers:
-        worker.cancel()
-
-    await asyncio.gather(*workers)
-
-    end_time = time.time()
-    logger.info(f"Total time: {end_time - start_time} seconds")
+        end_time = time.time()
+        logger.info(f"Total time: {end_time - start_time} seconds")
+    except Exception as e:
+        logger.error(f"Error in fetch_task: {e}")
+        raise

@@ -2,17 +2,13 @@ import html
 import logging
 import os
 from datetime import datetime
-from sqlite3 import IntegrityError
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import feedparser
 import html2text
 import requests
-from sqlalchemy.orm import Session
 
 from src.crawl import WebContentExtractor, scrape_sync
-from src.models import db
-from src.models.rss_entry import RssEntry
 
 
 class RssReader:
@@ -39,7 +35,7 @@ class RssReader:
             # 设置feedparser的代理
             feedparser.USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 
-    def _process_entry(self, feed_info: Dict[str, str], entry: Dict) -> Dict:
+    def _process_entry(self, entry: Dict) -> Dict:
         """
         处理单个RSS条目，提取并转换字段
 
@@ -49,12 +45,9 @@ class RssReader:
         Returns:
             Dict: 处理后的条目字典
         """
-        published_at = datetime.strptime(
-            entry.get("published", ""), "%a, %d %b %Y %H:%M:%S %z"
-        )
         entry = {
             "title": html.unescape(entry.get("title", "")),
-            "feed_id": feed_info.get("id"),
+            "feed_id": self.feed.get("id"),
             "link": entry.get("link", ""),
             "published": entry.get("published", ""),
             "summary": html.unescape(entry.get("summary", "")),
@@ -74,46 +67,6 @@ class RssReader:
         if entry.get("content").strip() == "" and entry.get("link") != "":
             content = scrape_sync(entry.get("link")).get("content")
             entry["content"] = content
-
-        with Session(db) as session:
-            new_entry = entry.copy()
-            new_entry.pop("published")
-            new_entry["published_at"] = published_at
-
-            try:
-                existing_entry = (
-                    session.query(RssEntry)
-                    .filter_by(link=entry["link"])
-                    .first()
-                )
-                if existing_entry:
-                    if existing_entry.content.strip() == "":
-                        # existing entry has no content, update it
-                        existing_entry.content = new_entry["content"]
-                        existing_entry.published_at = new_entry["published_at"]
-                        # update the entry
-                        session.add(existing_entry)
-                        session.commit()
-                    else:
-                        # existing entry has content, skip it
-                        return entry
-                else:
-                    session.add(RssEntry(**new_entry))
-                    session.commit()
-            except IntegrityError as e:
-                # after check the entry, if it already exists, we dont add entry directly
-                # this expect seems meanless
-                session.rollback()
-                # 使用 warning 而不是 warn，并记录更详细的错误信息
-                logging.warning(
-                    f"Entry with link {entry['link']} already exists: {str(e)}"
-                )
-            except Exception as e:
-                session.rollback()
-                logging.error(
-                    f"Database error when processing entry {entry['link']}: {str(e)}"
-                )
-
         return entry
 
     def parse_feed(self, url: str) -> bool:
@@ -148,11 +101,29 @@ class RssReader:
             return False
 
     def update_feed_info(
-        self, property: str, value: Any, feed_info: Optional[Dict]
+        self,
+        property: Optional[str] = None,
+        value: Optional[str] = None,
+        feed_info: Optional[Dict] = None,
     ):
+        """
+        更新 feed 信息
+
+        Args:
+            property: 要更新的属性名
+            value: 要更新的属性值
+            feed_info: 完整的 feed 信息字典
+        """
+        if self.feed is None:
+            raise ValueError("Feed is not initialized")
         if feed_info is not None:
             self.feed = feed_info
-        self.feed[property] = value
+        elif property is not None and value is not None:
+            self.feed[property] = value
+        else:
+            raise ValueError(
+                "Either feed_info or both property and value must be provided"
+            )
 
     def get_feed_info(self) -> Optional[Dict[str, str]]:
         """
@@ -192,14 +163,10 @@ class RssReader:
         if not self.entries:
             return []
 
-        return [
-            self._process_entry(feed_info, entry)
-            for entry in self.entries[:limit]
-        ]
+        return [self._process_entry(entry) for entry in self.entries[:limit]]
 
     def get_entries_by_date(
         self,
-        feed_info: Optional[Dict[str, str]],
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> List[Dict]:
@@ -207,8 +174,9 @@ class RssReader:
         根据时间范围获取RSS条目列表
 
         Args:
-            start_date: 可选，起始日期时间
-            end_date: 可选，结束日期时间
+            feed_info: RSS源信息
+            start_date: 可选，起始日期时间（naive UTC）
+            end_date: 可选，结束日期时间（naive UTC）
 
         Returns:
             List[Dict]: 符合时间范围的RSS条目列表
@@ -220,11 +188,11 @@ class RssReader:
         for entry in self.entries:
             published = entry.get("published_parsed")
             if published:
+                # feedparser 返回的是 time.struct_time，转换为 naive UTC datetime
                 published_datetime = datetime(*published[:6])
+
                 if (
                     start_date is None or published_datetime >= start_date
                 ) and (end_date is None or published_datetime <= end_date):
-                    filtered_entries.append(
-                        self._process_entry(feed_info, entry)
-                    )
+                    filtered_entries.append(self._process_entry(entry))
         return filtered_entries

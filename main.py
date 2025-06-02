@@ -2,9 +2,9 @@ import argparse
 import logging
 from pathlib import Path
 
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 import uvicorn
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from src.config import config
 from src.graph.graph import run_reporter_graph
@@ -37,6 +37,7 @@ def setup_logging():
             logging.StreamHandler(),  # 输出到控制台
         ],
     )
+
 
 def main():
     """
