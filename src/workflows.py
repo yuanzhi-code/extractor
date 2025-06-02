@@ -9,6 +9,7 @@ from src.config import config
 from src.graph.graph import run_graph
 from src.models import db
 from src.models.rss_entry import RssEntry
+from src.models.tags import EntryCategory
 from src.rss.rss_reader import RssReader
 from src.sources import SourceConfig
 
@@ -52,15 +53,15 @@ async def fetch_task(max_workers: int = 10):
                 entries.extend(new_entries)
             except Exception as e:
                 logger.error(f"Error parsing source {source.name}: {e}")
-        session = Session(db)
-        today = datetime.datetime.today()
-        _e = (
-            session.query(RssEntry)
-            .filter(RssEntry.published_at >= today - datetime.timedelta(days=7))
-            .all()
-        )
-        session.close()
-        entries.extend(_e)
+        with Session(db) as session:
+            today = datetime.datetime.today()
+            _e = (
+                session.query(RssEntry)
+                .filter(RssEntry.published_at >= today - datetime.timedelta(days=7))
+                .join(EntryCategory, RssEntry.id == EntryCategory.entry_id)
+                .all()
+            )
+            entries.extend(_e)
         if not entries or len(entries) == 0:
             logger.info(
                 f"No new entries for source {source.name} to process, check the entries in database which may need to be process"
