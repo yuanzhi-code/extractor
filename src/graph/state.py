@@ -14,14 +14,6 @@ class State(TypedDict):
     entry: RssEntry
     category: str
 
-    @property
-    def entry_content(self) -> str:
-        return self["entry"].content
-
-    @property
-    def entry_id(self) -> int:
-        return self["entry"].id
-
 
 class DeduplicateState(TypedDict):
     """

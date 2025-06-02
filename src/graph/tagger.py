@@ -24,7 +24,7 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
     messages.append(
         HumanMessage(
             f"""content which need to be tagged:
-            {state.entry_content}
+            {state['entry'].content}
             """
         )
     )
@@ -37,7 +37,7 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
         try:
             _category = EntriesCategories(
                 {
-                    "entry_id": state.entry_id,
+                    "entry_id": state["entry"].id,
                     "category": category,
                 }
             )
