@@ -51,9 +51,13 @@ class Source:
         """
         get feed info from database, if not found, insert it from input dict.
 
-        returns:
-            - feed_info_model: RssFeed model
-            - need_full_sync: bool, it indicates that the feed parser need to sync all entries if `True`
+        Args:
+            feed_info: feed information dictionary from RSS
+
+        Returns:
+            tuple:
+                - feed_info_model: RssFeed model
+                - need_full_sync: bool, indicates that the feed parser needs to sync all entries if True
         """
         with Session(db) as session:
             rss_feed = (
@@ -73,22 +77,40 @@ class Source:
                 session.add(rss_feed)
                 session.commit()
                 session.refresh(rss_feed)
+
                 feed_info["id"] = rss_feed.id
                 return rss_feed, True
+
             except IntegrityError:
                 session.rollback()
+                # 如果发生完整性错误，尝试再次获取
+                rss_feed = (
+                    session.query(RssFeed)
+                    .filter_by(link=feed_info["link"])
+                    .first()
+                )
+                if rss_feed is not None:
+                    feed_info["id"] = rss_feed.id
+                    return rss_feed, False
+                raise  # 如果还是找不到，则抛出异常
             except Exception as e:
+                session.rollback()
                 logger.error(f"Error inserting feed: {e}")
-                raise e
+                raise
 
     async def _crawl_entry(self, entries: List[dict]):
         """
         crawl entry content
+        Args:
+            entries: list of entries to crawl content for
+        Returns:
+            List[dict]: entries with crawled content
         """
         tasks = [scrape_website_to_markdown(entry["link"]) for entry in entries]
         results = await asyncio.gather(*tasks)
         for entry, result in zip(entries, results):
             entry["content"] = result["content"]
+        return entries
 
     async def _full_sync_feed(
         self,
@@ -113,7 +135,7 @@ class Source:
             start_date=end_date,
             end_date=feed_updated,
         )
-        entries = await self._crawl_entry(entries)
+        await self._crawl_entry(entries)
         return entries
 
     async def _partial_sync_feed(
@@ -135,10 +157,12 @@ class Source:
             f"fetch new entry between {last_fetched} to {newest_updated}"
         )
 
-        return rss_reader.get_entries_by_date(
+        entries = rss_reader.get_entries_by_date(
             start_date=last_fetched,
             end_date=newest_updated,
         )
+        await self._crawl_entry(entries)
+        return entries
 
     @backoff.on_exception(
         backoff.expo, requests.RequestException, max_time=30, max_tries=3
@@ -175,20 +199,26 @@ class Source:
                 newest_updated=feed_info["updated"],
             )
 
-        # update feed updated time after parsing all entries
+        # 更新条目，刷新 feed 作为一个完整的事务
         session = Session(db)
         try:
+            # 首先更新 feed 的更新时间
+            session.add(feed_info_model)
+            feed_info_model.datetime_from_str(feed_info["updated"])
+
+            # 然后更新或插入条目
             for entry in entries:
                 existing_entry = (
                     session.query(RssEntry)
                     .filter_by(link=entry["link"])
                     .first()
                 )
+                # 条目已存在，考虑 content 是否为空
                 if existing_entry:
                     if existing_entry.content.strip() == "":
                         existing_entry.content = entry["content"]
                         existing_entry.published_at = entry["published_at"]
-                        session.flush(existing_entry)
+                        session.add(existing_entry)
                 else:
                     new_entry = entry.copy()
                     new_entry.pop("published")
@@ -196,10 +226,11 @@ class Source:
                         entry["published"]
                     )
                     session.add(RssEntry(**new_entry))
-            session.flush(feed_info_model)
+
             session.commit()
         except Exception as e:
             session.rollback()
+            logger.error(f"Error updating feed and entries: {e}")
             raise e
         finally:
             session.close()

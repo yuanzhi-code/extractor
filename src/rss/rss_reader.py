@@ -63,10 +63,10 @@ class RssReader:
             ),
         }
 
-        # TODO(woxqaq): crawl api is too slow, we should use a better way to get the content
-        if entry.get("content").strip() == "" and entry.get("link") != "":
-            content = scrape_sync(entry.get("link")).get("content")
-            entry["content"] = content
+        # # TODO(woxqaq): crawl api is too slow, we should use a better way to get the content
+        # if entry.get("content").strip() == "" and entry.get("link") != "":
+        #     content = scrape_sync(entry.get("link")).get("content")
+        #     entry["content"] = content
         return entry
 
     def parse_feed(self, url: str) -> bool:

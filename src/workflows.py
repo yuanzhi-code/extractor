@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+import traceback
 
 from src.config import config
 from src.graph.graph import run_graph
