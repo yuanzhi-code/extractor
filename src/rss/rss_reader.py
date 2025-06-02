@@ -10,6 +10,7 @@ import requests
 
 from src.crawl import WebContentExtractor, scrape_sync
 
+
 class RssReader:
     # TODO(woxqaq): add cache for feeds and entries
     def __init__(self, proxy: Optional[str] = None):

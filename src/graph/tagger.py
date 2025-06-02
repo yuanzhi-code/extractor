@@ -29,7 +29,6 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
         if entry_category:
             logger.info(f"entry {state['entry'].get('id')} has been tagged")
             return Command(goto="score")
-        session.close()
 
     messages = get_prompt("tagger")
     model_provider = config.MODEL_PROVIDER

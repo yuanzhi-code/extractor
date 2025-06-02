@@ -11,6 +11,7 @@ from sqlalchemy import (
 
 from .base import Base
 
+
 class RssEntry(Base):
     """
     RssFeeds 类表示 RSS 源的数据库模型。

@@ -46,11 +46,7 @@ def score_node(state: State):
             "entry_id": state["entry"].get("id"),
             "score": score,
         }
-        try:
-            session.add(EntryScore(_score))
-            session.commit()
-        except Exception as e:
-            session.rollback()
+        session.add(EntryScore(_score))
     if score == "noise":
         return Command(goto="__end__")
     return {"result": response}

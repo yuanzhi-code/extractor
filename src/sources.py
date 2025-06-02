@@ -75,12 +75,11 @@ class Source:
             rss_feed.datetime_from_str(feed_info["updated"])
             try:
                 session.add(rss_feed)
-                session.commit()
                 session.refresh(rss_feed)
+                session.commit()
 
                 feed_info["id"] = rss_feed.id
                 return rss_feed, True
-
             except IntegrityError:
                 session.rollback()
                 # 如果发生完整性错误，尝试再次获取
@@ -202,8 +201,7 @@ class Source:
             )
 
         # 更新条目，刷新 feed 作为一个完整的事务
-        session = Session(db)
-        try:
+        with Session(db) as session:
             # 首先更新 feed 的更新时间
             session.add(feed_info_model)
             feed_info_model.datetime_from_str(feed_info["updated"])
@@ -228,15 +226,6 @@ class Source:
                         entry["published"]
                     )
                     session.add(RssEntry(**new_entry))
-
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            logger.error(f"Error updating feed and entries: {e}")
-            raise e
-        finally:
-            session.close()
-
         return entries
 
 
