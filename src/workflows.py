@@ -42,7 +42,7 @@ async def fetch_task(max_workers: int = 10):
     try:
         rss_reader = RssReader(config.NETWORK_PROXY)
 
-        source_config = SourceConfig("./data/rss_sources.json")
+        source_config = SourceConfig(source_dir="./data")
         entries = []
         for source in source_config.sources:
             try:

@@ -1,10 +1,11 @@
 import asyncio
 import json
 import logging
+import os
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from sqlite3 import IntegrityError
-from typing import List
+from typing import List, Optional
 
 import backoff
 import requests
@@ -46,6 +47,14 @@ class Source:
             name=data["name"],
             url=data["url"],
             description=data["description"],
+        )
+
+    @classmethod
+    def from_xml_element(cls, element: ET.Element):
+        return cls(
+            name=element.get("text"),
+            url=element.get("xmlUrl"),
+            description=element.get("title"),
         )
 
     def _get_or_insert_feed(self, feed_info: dict):
@@ -231,28 +240,45 @@ class Source:
 
 
 class SourceConfig:
-    def __init__(self, source_path: str):
-        with open(source_path, "r", encoding="utf-8") as f:
+    def __init__(
+        self,
+        source_path: Optional[str] = None,
+        source_dir: Optional[str] = None,
+    ):
+        self.sources = []
+        self._link_set: set[str] = set()
+        if source_path is not None:
+            self.from_json(source_path)
+        elif source_dir is not None:
+            for file in os.listdir(source_dir):
+                if file.endswith(".json"):
+                    self.from_json(os.path.join(source_dir, file))
+                elif file.endswith(".opml"):
+                    self.from_opml(os.path.join(source_dir, file))
+        else:
+            raise ValueError("no source path or source dir provided")
+
+    def insert_source(self, source: Source):
+        if source.url in self._link_set:
+            return
+        self._link_set.add(source.url)
+        self.sources.append(source)
+
+    def from_json(self, json_path: str):
+        with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        self.sources = [Source.from_dict(source) for source in data["sources"]]
+            if "sources" not in data:
+                raise ValueError("invalid json file")
+            data = data["sources"]
+            for source in data:
+                self.insert_source(Source.from_dict(source))
 
-    @classmethod
-    def from_dict(cls, data: dict):
-        return [Source.from_dict(source) for source in data["sources"]]
-
-    @classmethod
-    def from_opml(cls, opml_path: str):
+    def from_opml(self, opml_path: str):
         tree = ET.parse(opml_path)
         root = tree.getroot()
         if not isinstance(root, ET.Element):
             raise ValueError("invalid opml file")
         for child in root.iter("outline"):
             if child.get("type") == "rss":
-                cls.sources.append(
-                    Source(
-                        child.get("text"),
-                        child.get("xmlUrl"),
-                        child.get("title"),
-                    )
-                )
-        return cls
+                self.insert_source(Source.from_xml_element(child))
+        return self
