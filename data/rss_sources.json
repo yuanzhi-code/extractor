@@ -1,9 +1,0 @@
-{
-    "sources": [
-        {
-            "name": "geekpark",
-            "url": "https://www.geekpark.net/rss",
-            "description": "geekpark rss source"
-        }
-    ]
-} 
