@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
     scheduler.shutdown()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, title="yuanzhi ai-extractor web API")
 
 
 @app.get("/")

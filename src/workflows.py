@@ -6,7 +6,7 @@ import time
 from sqlalchemy.orm import Session
 
 from src.config import config
-from src.graph.graph import run_graph
+from src.graph import run_classification_graph
 from src.models import db
 from src.models.rss_entry import RssEntry
 from src.models.tags import EntryCategory
@@ -24,7 +24,7 @@ async def consumer(task_queue: asyncio.Queue):
                 break
             try:
                 logger.info(f"Processing entry: {entry.get('title', '')}")
-                await run_graph(entry)
+                await run_classification_graph(entry)
             except Exception as e:
                 logger.error(f"Error processing entry: {e}")
             finally:
