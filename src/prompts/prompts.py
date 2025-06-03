@@ -2,6 +2,12 @@ import os
 from typing import Dict, List
 
 
+def _model_specific_prompt(model_name: str | None) -> str:
+    if model_name and "qwen3" in model_name.casefold():
+        return "/no_think\n"
+    return ""
+
+
 def get_prompt(
     prompt_name: str,
     model_name: str = None,
@@ -12,12 +18,7 @@ def get_prompt(
             return [
                 {
                     "role": "system",
-                    "content": (
-                        "/no_think\n"
-                        if model_name and "qwen3" in model_name.casefold()
-                        else ""
-                    )
-                    + f.read(),
+                    "content": _model_specific_prompt(model_name) + f.read(),
                 }
             ]
     except Exception as e:

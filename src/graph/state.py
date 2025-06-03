@@ -2,6 +2,8 @@ from typing import List
 
 from typing_extensions import TypedDict
 
+from src.models.rss_entry import RssEntry
+
 
 class State(TypedDict):
     """
@@ -9,6 +11,7 @@ class State(TypedDict):
     """
 
     content: str
+    entry: RssEntry
     category: str
 
 

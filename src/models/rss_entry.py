@@ -1,23 +1,15 @@
 from datetime import datetime
-from enum import IntEnum
 
 from sqlalchemy import (
     TEXT,
     Index,
     Integer,
-    SmallInteger,
     String,
     UniqueConstraint,
     orm,
 )
 
 from .base import Base
-
-
-class EntryStatus(IntEnum):
-    NOT_HANDLE = 0
-    SUCCESS = 1
-    FAIL = 2
 
 
 class RssEntry(Base):
@@ -32,7 +24,6 @@ class RssEntry(Base):
     - published: 文章的发布时间
     - title: 文章标题
     - author: 文章作者
-    - status: 处理状态(0: 未处理, 1: 成功, 2: 失败)
     - summery: 总结
     - created_gmt: 记录创建时间
     - modified_gmt: 最后更新时间
@@ -45,9 +36,6 @@ class RssEntry(Base):
     content: orm.Mapped[str] = orm.mapped_column(TEXT, nullable=False)
     title: orm.Mapped[str] = orm.mapped_column(String(255), nullable=False)
     author: orm.Mapped[str] = orm.mapped_column(String(255), nullable=False)
-    status: orm.Mapped[int] = orm.mapped_column(
-        SmallInteger(), nullable=False, default=0
-    )
     summary: orm.Mapped[str] = orm.mapped_column(String(255), nullable=False)
     published_at: orm.Mapped[datetime] = orm.mapped_column(nullable=False)
     created_gmt: orm.Mapped[datetime] = orm.mapped_column(
@@ -58,9 +46,18 @@ class RssEntry(Base):
     )
     __table_args__ = (
         UniqueConstraint("link", name="unique_rss_entry_link"),
-        Index("idx_rss_entry_status", "status"),
         Index("idx_rss_entry_published_at", "published_at"),
     )
 
-    def get_status(self) -> EntryStatus:
-        return EntryStatus[self.status]  # type: ignore
+    @classmethod
+    def from_dict(cls, **kwargs):
+        return cls(
+            id=kwargs.get("id"),
+            feed_id=kwargs.get("feed_id"),
+            link=kwargs.get("link"),
+            content=kwargs.get("content"),
+            title=kwargs.get("title"),
+            author=kwargs.get("author"),
+            summary=kwargs.get("summary"),
+            published_at=kwargs.get("published_at"),
+        )

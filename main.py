@@ -1,12 +1,15 @@
 import argparse
-import asyncio
 import logging
 from pathlib import Path
 
+import uvicorn
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.schedulers.background import BackgroundScheduler
+
 from src.config import config
-from src.graph.graph import run_graph, run_reporter_graph
+from src.graph.graph import run_reporter_graph
 from src.llms import LLMFactory
-from src.sources import main as sources_main
+from src.workflows import fetch_task
 
 logger = logging.Logger(__name__)
 
@@ -50,4 +53,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    setup_logging()
+    uvicorn.run("src.app:app", reload=False, log_level="info")

@@ -4,15 +4,13 @@ from enum import IntEnum
 from sqlalchemy import (
     Index,
     Integer,
-    SmallInteger,
-    String,
-    UniqueConstraint,
     orm,
 )
 
 from .base import Base
 
-class Categories(IntEnum):
+
+class Category(IntEnum):
     TECH = 1
     BUSINESS = 2
     EXPERIENCE = 3
@@ -21,17 +19,17 @@ class Categories(IntEnum):
     @staticmethod
     def from_str(value: str) -> int:
         if value.casefold() == "tech":
-            return Categories.TECH
+            return Category.TECH
         elif value.casefold() == "business":
-            return Categories.BUSINESS
+            return Category.BUSINESS
         elif value.casefold() == "experience":
-            return Categories.EXPERIENCE
+            return Category.EXPERIENCE
         else:
             raise ValueError(f"Invalid category: {value}")
 
 
-class EntriesCategories(Base):
-    __tablename__ = "entries_categories"
+class EntryCategory(Base):
+    __tablename__ = "entry_category"
     id: orm.Mapped[int] = orm.mapped_column(
         primary_key=True, autoincrement=True
     )
@@ -42,10 +40,10 @@ class EntriesCategories(Base):
     )
 
     __table_args__ = (
-        Index("idx_entries_categories_entry_id", "entry_id"),
-        Index("idx_entries_categories_category", "category"),
+        Index("idx_entry_category_entry_id", "entry_id"),
+        Index("idx_entry_category_category", "category"),
     )
 
     @property
-    def entry_category_(self) -> Categories:
-        return Categories(self.category)
+    def entry_category_(self) -> Category:
+        return Category(self.category)

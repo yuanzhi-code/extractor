@@ -5,10 +5,12 @@ from sqlalchemy import DateTime, Index, Integer, String, orm
 
 from .base import Base
 
+
 class Score(StrEnum):
     NOISE = "noise"
     ACTIONABLE = "actionable"
     SYSTEMATIC = "systematic"
+
 
 class EntryScore(Base):
     __tablename__ = "entry_scores"

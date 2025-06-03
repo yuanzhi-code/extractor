@@ -1,12 +1,20 @@
+import asyncio
 import json
 import logging
-import time
 from datetime import datetime, timedelta
+from sqlite3 import IntegrityError
+from typing import List
 
-from requests import RequestException
+import backoff
+import requests
+from sqlalchemy.orm import Session
 
-from src.config.app_config import AppConfig
+from src.crawl.crawl import scrape_website_to_markdown
+from src.models import db
+from src.models.rss_entry import RssEntry
+from src.models.rss_feed import RssFeed
 from src.rss import RssReader
+from src.utils.time import parse_feed_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -39,58 +47,186 @@ class Source:
             description=data["description"],
         )
 
-    def parse(self, rss_reader: RssReader) -> list[dict]:
-        # 添加重试机制
-        # TODO: introduce backoff retry
-        max_retries = 3
-        retry_delay = 5  # 秒
-        for attempt in range(max_retries):
+    def _get_or_insert_feed(self, feed_info: dict):
+        """
+        get feed info from database, if not found, insert it from input dict.
+
+        Args:
+            feed_info: feed information dictionary from RSS
+
+        Returns:
+            tuple:
+                - feed_info_model: RssFeed model
+                - need_full_sync: bool, indicates that the feed parser needs to sync all entries if True
+        """
+        with Session(db) as session:
+            rss_feed = (
+                session.query(RssFeed).filter_by(link=feed_info["link"]).first()
+            )
+            if rss_feed is not None:
+                feed_info["id"] = rss_feed.id
+                return rss_feed, False
+            rss_feed = RssFeed(
+                title=feed_info["title"],
+                description=feed_info["description"],
+                link=feed_info["link"],
+                language=feed_info["language"],
+            )
+            rss_feed.datetime_from_str(feed_info["updated"])
             try:
-                if rss_reader.parse_feed(self.url):
-                    feed_info = rss_reader.get_feed_info()
-                    logger.info(f"Feed标题: {feed_info['title']}")
-                    logger.info(f"Feed描述: {feed_info['description']}")
-                    logger.info(f"Feed链接: {feed_info['link']}")
-                    logger.info(f"Feed语言: {feed_info['language']}")
-                    logger.info(f"最后更新: {feed_info['updated']}")
-                    logger.info("-" * 50)
+                session.add(rss_feed)
+                session.refresh(rss_feed)
+                session.commit()
 
-                    today = datetime.today()
-                    start_date = datetime(today.year, today.month, 1)
-                    end_date = datetime(today.year, today.month, 1) + timedelta(
-                        days=31
-                    )
-                    end_date = end_date.replace(day=1) - timedelta(days=1)
-                    logger.info(
-                        f"本月的RSS条目 ({start_date.strftime('%Y-%m-%d')} 至 {end_date.strftime('%Y-%m-%d')}):"
-                    )
-                    entries = rss_reader.get_entries_by_date(
-                        start_date=start_date,
-                        end_date=end_date,
-                        feed_info=feed_info,
-                    )
-
-                    return entries
-
-                else:
-                    logger.warning(
-                        f"解析RSS源失败 (尝试 {attempt + 1}/{max_retries})"
-                    )
-                    if attempt < max_retries - 1:
-                        logging.warning(f"等待 {retry_delay} 秒后重试...")
-                        time.sleep(retry_delay)
-            except RequestException as e:
-                logger.warning(
-                    f"网络请求错误 (尝试 {attempt + 1}/{max_retries}): {str(e)}"
+                feed_info["id"] = rss_feed.id
+                return rss_feed, True
+            except IntegrityError:
+                session.rollback()
+                # 如果发生完整性错误，尝试再次获取
+                rss_feed = (
+                    session.query(RssFeed)
+                    .filter_by(link=feed_info["link"])
+                    .first()
                 )
-                if attempt < max_retries - 1:
-                    logger.warning(f"等待 {retry_delay} 秒后重试...")
-                    time.sleep(retry_delay)
+                if rss_feed is not None:
+                    feed_info["id"] = rss_feed.id
+                    return rss_feed, False
+                raise  # 如果还是找不到，则抛出异常
             except Exception as e:
-                logger.error(f"发生未知错误: {str(e)}")
-                break
-        # 在请求之间添加延时，避免请求过于频繁
-        return []
+                session.rollback()
+                logger.error(f"Error inserting feed: {e}")
+                raise
+            finally:
+                session.close()
+
+    async def _crawl_entry(self, entries: List[dict]):
+        """
+        crawl entry content
+        Args:
+            entries: list of entries to crawl content for
+        Returns:
+            List[dict]: entries with crawled content
+        """
+        tasks = [scrape_website_to_markdown(entry["link"]) for entry in entries]
+        results = await asyncio.gather(*tasks)
+        for entry, result in zip(entries, results):
+            entry["content"] = result["content"]
+        return entries
+
+    async def _full_sync_feed(
+        self,
+        rss_reader: RssReader,
+        feed_updated: datetime | str,
+        fetch_week: int = 1,
+    ):
+        """
+        full sync feed entries
+        Args:
+            feed_updated: 最新更新时间，可以是datetime对象或RSS格式的时间字符串
+            fetch_week: 要获取的历史数据的周数
+        """
+        if isinstance(feed_updated, str):
+            feed_updated = parse_feed_datetime(feed_updated)
+
+        logger.info("a new feed is found, need to full sync")
+        today = datetime.now(datetime.UTC)  # 使用UTC时间
+        end_date = today - timedelta(weeks=fetch_week)
+
+        entries = rss_reader.get_entries_by_date(
+            start_date=end_date,
+            end_date=feed_updated,
+        )
+        await self._crawl_entry(entries)
+        return entries
+
+    async def _partial_sync_feed(
+        self,
+        rss_reader: RssReader,
+        last_fetched: datetime,
+        newest_updated: datetime | str,
+    ):
+        """
+        partial sync feed entries
+        Args:
+            last_fetched: 上次获取的时间
+            newest_updated: 最新更新时间，可以是datetime对象或RSS格式的时间字符串
+        """
+        if isinstance(newest_updated, str):
+            newest_updated = parse_feed_datetime(newest_updated)
+
+        logger.info(
+            f"fetch new entry between {last_fetched} to {newest_updated}"
+        )
+
+        entries = rss_reader.get_entries_by_date(
+            start_date=last_fetched,
+            end_date=newest_updated,
+        )
+        await self._crawl_entry(entries)
+        return entries
+
+    @backoff.on_exception(
+        backoff.expo, requests.RequestException, max_time=30, max_tries=3
+    )
+    async def parse(self, rss_reader: RssReader) -> list[dict]:
+        """
+        parse feed and return entries
+        if feed is up to date, return empty list
+        if feed is not up to date, parse entries and return entries
+        if error occurs, raise the error
+        """
+        if not rss_reader.parse_feed(self.url):
+            return []
+        feed_info = rss_reader.get_feed_info()
+        feed_info_model, need_full_sync = self._get_or_insert_feed(feed_info)
+        if feed_info_model.is_up_to_date(feed_info["updated"]):
+            logger.info(f"Feed {feed_info['title']} is up to date")
+            return []
+        rss_reader.update_feed_info(feed_info=feed_info)
+        logger.info(f"Feed标题: {feed_info['title']}")
+        logger.info(f"Feed描述: {feed_info['description']}")
+        logger.info(f"Feed链接: {feed_info['link']}")
+        logger.info(f"Feed语言: {feed_info['language']}")
+        logger.info(f"最后更新: {feed_info['updated']}")
+        logger.info("-" * 50)
+        if need_full_sync:
+            entries = await self._full_sync_feed(
+                rss_reader=rss_reader, feed_updated=feed_info["updated"]
+            )
+        else:
+            entries = await self._partial_sync_feed(
+                rss_reader=rss_reader,
+                last_fetched=feed_info_model.updated,
+                newest_updated=feed_info["updated"],
+            )
+
+        # 更新条目，刷新 feed 作为一个完整的事务
+        with Session(db) as session:
+            # 首先更新 feed 的更新时间
+            session.add(feed_info_model)
+            feed_info_model.datetime_from_str(feed_info["updated"])
+
+            # 然后更新或插入条目
+            for entry in entries:
+                existing_entry = (
+                    session.query(RssEntry)
+                    .filter_by(link=entry["link"])
+                    .first()
+                )
+                # 条目已存在，考虑 content 是否为空
+                if existing_entry:
+                    if existing_entry.content.strip() == "":
+                        existing_entry.content = entry["content"]
+                        existing_entry.published_at = entry["published_at"]
+                        session.add(existing_entry)
+                else:
+                    new_entry = entry.copy()
+                    new_entry.pop("published")
+                    new_entry["published_at"] = parse_feed_datetime(
+                        entry["published"]
+                    )
+                    session.add(RssEntry(**new_entry))
+        return entries
 
 
 class SourceConfig:
@@ -102,22 +238,3 @@ class SourceConfig:
     @classmethod
     def from_dict(cls, data: dict):
         return [Source.from_dict(source) for source in data["sources"]]
-
-
-# if __name__ == "__main__":
-def main():
-    """
-    entrypoint for fetch and parse source
-    """
-
-    config = AppConfig()
-    rss_reader = RssReader(config.NETWORK_PROXY)
-
-    source_config = SourceConfig("./data/rss_sources.json")
-    for source in source_config.sources:
-        source.parse(rss_reader)
-        time.sleep(1)
-
-
-if __name__ == "__main__":
-    main()
