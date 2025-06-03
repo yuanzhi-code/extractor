@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from sqlite3 import IntegrityError
 from typing import List
@@ -238,3 +239,20 @@ class SourceConfig:
     @classmethod
     def from_dict(cls, data: dict):
         return [Source.from_dict(source) for source in data["sources"]]
+
+    @classmethod
+    def from_opml(cls, opml_path: str):
+        tree = ET.parse(opml_path)
+        root = tree.getroot()
+        if not isinstance(root, ET.Element):
+            raise ValueError("invalid opml file")
+        for child in root.iter("outline"):
+            if child.get("type") == "rss":
+                cls.sources.append(
+                    Source(
+                        child.get("text"),
+                        child.get("xmlUrl"),
+                        child.get("title"),
+                    )
+                )
+        return cls

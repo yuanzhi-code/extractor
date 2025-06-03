@@ -3,8 +3,8 @@ import logging
 from langgraph.graph import END, START, StateGraph
 
 from src.graph.score import score_node
-from src.graph.tagger import tagger_node
 from src.graph.state import State
+from src.graph.tagger import tagger_node
 from src.models.rss_entry import RssEntry
 
 logger = logging.getLogger(__name__)
