@@ -4,6 +4,7 @@ from .rss_entry import RssEntry
 from .rss_feed import RssFeed
 from .score import EntryScore
 from .tags import Category, EntryCategory
+from .entry_summary import EntrySummary
 
 __all__ = [
     "Base",
@@ -14,4 +15,5 @@ __all__ = [
     "EntryCategory",
     "Category",
     "EntryScore",
+    "EntrySummary",
 ]
