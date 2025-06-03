@@ -25,6 +25,15 @@ def score_node(state: State):
     if prev_category not in ["tech", "business", "experience"]:
         raise ValueError("Invalid category")
 
+    with Session(db) as session:
+        entry_score = (
+            session.query(EntryScore)
+            .filter(EntryScore.entry_id == state["entry"].get("id"))
+            .first()
+        )
+        if entry_score:
+            return Command(goto="__end__")
+
     # 修改: 使用 HumanMessage 构造消息
     messages = get_prompt("scorer")
     model_provider = config.MODEL_PROVIDER
