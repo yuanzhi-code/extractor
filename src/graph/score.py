@@ -37,7 +37,7 @@ def score_node(state: State):
     # 修改: 使用 HumanMessage 构造消息
     messages = get_prompt("scorer")
     model_provider = config.MODEL_PROVIDER
-    llm = LLMFactory().get_llm(model_provider)
+    llm = LLMFactory().get_llm(model_provider, model=None)
     messages.append(
         HumanMessage(
             content=f"""

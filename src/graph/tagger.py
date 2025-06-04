@@ -32,7 +32,7 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
 
     messages = get_prompt("tagger")
     model_provider = config.MODEL_PROVIDER
-    llm = LLMFactory().get_llm(model_provider)
+    llm = LLMFactory().get_llm(model_provider, model=None)
     messages.append(
         HumanMessage(
             f"""content which need to be tagged:
