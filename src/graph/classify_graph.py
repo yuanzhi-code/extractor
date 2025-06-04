@@ -25,12 +25,12 @@ def get_classification_graph() -> CompiledStateGraph:
         with Session(db) as session:
             entry_category = (
                 session.query(EntryCategory)
-                .filter(EntryCategory.entry_id == state["entry"].get("id"))
+                .filter(EntryCategory.entry_id == state["entry"].id)
                 .first()
             )
             entry_score = (
                 session.query(EntryScore)
-                .filter(EntryScore.entry_id == state["entry"].get("id"))
+                .filter(EntryScore.entry_id == state["entry"].id)
                 .first()
             )
             if entry_category and entry_score:

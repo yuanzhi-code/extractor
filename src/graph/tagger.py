@@ -29,7 +29,7 @@ def tagger_node(state: ClassifyState, config: RunnableConfig) -> Command:
         HumanMessage(
             f"""
             现在请对原始内容进行分类，并给出你的分类结果
-            原始内容:{state['entry'].get('content')}
+            原始内容:{state['entry'].content}
             """
         )
     )
@@ -54,7 +54,7 @@ def tagger_review_node(state: ClassifyState) -> Command[Literal["score"]]:
             f"""
             现在请你对分类结果进行审查，并给出你的评审意见和修改结果
             分类结果:{tag_result}
-            原始内容:{state['entry'].get('content')}
+            原始内容:{state['entry'].content}
             """
         )
     )
@@ -67,7 +67,7 @@ def tagger_review_node(state: ClassifyState) -> Command[Literal["score"]]:
     with Session(db) as session:
         if not response.approved:
             tag_result = TagResult(**response.comment)
-        session.add(tag_result.to_entry_category(state["entry"].get("id")))
+        session.add(tag_result.to_entry_category(state["entry"].id))
 
     return Command(
         update={"tag_result": tag_result},

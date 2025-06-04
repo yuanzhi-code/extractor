@@ -40,7 +40,6 @@ class LLMFactory:
             cfg.update("model", model)
         logger.info(f"Using LLM: {llm_type}/{cfg.get('model')}")
         llm = ChatOpenAI(**cfg)
-        llm.withs
         return llm
 
     def _get_llm_cfg(self, llm_type: str):
