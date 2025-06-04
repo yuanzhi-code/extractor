@@ -12,6 +12,7 @@ dependencies = [
     "backoff>=2.2.1",
     "bertopic>=0.17.0",
     "black>=25.1.0",
+    "colorlog>=6.9.0",
     "crawl4ai>=0.6.3",
     "dotenv>=0.9.9",
     "fastapi>=0.115.12",

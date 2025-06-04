@@ -7,8 +7,9 @@ import uvicorn
 from src.config import config
 from src.graph.reporter_graph import run_reporter_graph
 from src.llms import LLMFactory
+from src.utils.logger import setup_logger
 
-logger = logging.Logger(__name__)
+logger = setup_logger(__name__)
 
 
 def arg_parser():
@@ -25,15 +26,24 @@ def config_validate():
 
 
 def setup_logging():
-    # 配置根日志
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler("app.log"),  # 输出到文件
-            logging.StreamHandler(),  # 输出到控制台
-        ],
+    """
+    设置日志系统
+    - 使用彩色日志输出到控制台
+    - 同时保存到文件
+    """
+    # 获取根日志记录器
+    root_logger = setup_logger()
+    
+    # 添加文件处理器
+    file_handler = logging.FileHandler("app.log")
+    file_formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
+    file_handler.setFormatter(file_formatter)
+    root_logger.addHandler(file_handler)
+    
+    # 设置日志级别
+    root_logger.setLevel(logging.INFO)
 
 
 def main():

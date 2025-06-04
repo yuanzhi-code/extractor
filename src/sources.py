@@ -75,7 +75,7 @@ class Source:
             )
             if rss_feed is not None:
                 feed_info["id"] = rss_feed.id
-                return rss_feed, False
+                return rss_feed.id, False
             rss_feed = RssFeed(
                 title=feed_info["title"],
                 description=feed_info["description"],
@@ -85,11 +85,9 @@ class Source:
             rss_feed.datetime_from_str(feed_info["updated"])
             try:
                 session.add(rss_feed)
-                session.refresh(rss_feed)
                 session.commit()
-
                 feed_info["id"] = rss_feed.id
-                return rss_feed, True
+                return rss_feed.id, True
             except IntegrityError:
                 session.rollback()
                 # 如果发生完整性错误，尝试再次获取
@@ -100,14 +98,12 @@ class Source:
                 )
                 if rss_feed is not None:
                     feed_info["id"] = rss_feed.id
-                    return rss_feed, False
+                    return rss_feed.id, False
                 raise  # 如果还是找不到，则抛出异常
             except Exception as e:
                 session.rollback()
                 logger.error(f"Error inserting feed: {e}")
                 raise
-            finally:
-                session.close()
 
     async def _crawl_entry(self, entries: List[dict]):
         """
@@ -188,33 +184,36 @@ class Source:
         if not rss_reader.parse_feed(self.url):
             return []
         feed_info = rss_reader.get_feed_info()
-        feed_info_model, need_full_sync = self._get_or_insert_feed(feed_info)
-        if feed_info_model.is_up_to_date(feed_info["updated"]):
-            logger.info(f"Feed {feed_info['title']} is up to date")
-            return []
-        rss_reader.update_feed_info(feed_info=feed_info)
-        logger.info(f"Feed标题: {feed_info['title']}")
-        logger.info(f"Feed描述: {feed_info['description']}")
-        logger.info(f"Feed链接: {feed_info['link']}")
-        logger.info(f"Feed语言: {feed_info['language']}")
-        logger.info(f"最后更新: {feed_info['updated']}")
-        logger.info("-" * 50)
-        if need_full_sync:
-            entries = await self._full_sync_feed(
-                rss_reader=rss_reader, feed_updated=feed_info["updated"]
-            )
-        else:
-            entries = await self._partial_sync_feed(
-                rss_reader=rss_reader,
-                last_fetched=feed_info_model.updated,
-                newest_updated=feed_info["updated"],
-            )
-
-        # 更新条目，刷新 feed 作为一个完整的事务
+        feed_id, need_full_sync = self._get_or_insert_feed(feed_info)
+        
         with Session(db) as session:
-            # 首先更新 feed 的更新时间
-            session.add(feed_info_model)
-            feed_info_model.datetime_from_str(feed_info["updated"])
+            feed = session.query(RssFeed).get(feed_id)
+            if feed.is_up_to_date(feed_info["updated"]):
+                logger.info(f"Feed {feed_info['title']} is up to date")
+                return []
+            
+            rss_reader.update_feed_info(feed_info=feed_info)
+            logger.info(f"Feed标题: {feed_info['title']}")
+            logger.info(f"Feed描述: {feed_info['description']}")
+            logger.info(f"Feed链接: {feed_info['link']}")
+            logger.info(f"Feed语言: {feed_info['language']}")
+            logger.info(f"最后更新: {feed_info['updated']}")
+            logger.info("-" * 50)
+            
+            if need_full_sync:
+                entries = await self._full_sync_feed(
+                    rss_reader=rss_reader, feed_updated=feed_info["updated"]
+                )
+            else:
+                entries = await self._partial_sync_feed(
+                    rss_reader=rss_reader,
+                    last_fetched=feed.updated,
+                    newest_updated=feed_info["updated"],
+                )
+
+            # 更新条目，刷新 feed 作为一个完整的事务
+            feed.datetime_from_str(feed_info["updated"])
+            session.add(feed)
 
             # 然后更新或插入条目
             for entry in entries:
@@ -236,7 +235,9 @@ class Source:
                         entry["published"]
                     )
                     session.add(RssEntry(**new_entry))
-        return entries
+            
+            session.commit()
+            return entries
 
 
 class SourceConfig:
