@@ -1,5 +1,3 @@
-from typing import List
-
 from typing_extensions import TypedDict
 
 from src.models.rss_entry import RssEntry
@@ -20,5 +18,5 @@ class DeduplicateState(TypedDict):
     State for the deduplicate node.
     """
 
-    contents: List[str]
+    contents: list[str]
     deduplicated_contents: dict[int, str]

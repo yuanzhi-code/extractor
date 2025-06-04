@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 from langgraph.graph import END, START, StateGraph
 
@@ -22,7 +21,7 @@ def get_reporter_graph() -> StateGraph:
     return builder
 
 
-def run_reporter_graph(contents: List[str]):
+def run_reporter_graph(contents: list[str]):
     if not contents or len(contents) == 0:
         raise ValueError("Contents is required")
 
@@ -37,5 +36,5 @@ def run_reporter_graph(contents: List[str]):
                 else:
                     message.pretty_print()
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.exception("Error:")
             break

@@ -12,8 +12,8 @@ from .crawl import (
 
 __all__ = [
     "WebContentExtractor",
+    "quick_scrape",
     "scrape_multiple_websites",
     "scrape_sync",
     "scrape_website_to_markdown",
-    "quick_scrape",
 ]

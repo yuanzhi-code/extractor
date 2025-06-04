@@ -7,7 +7,8 @@ Create Date: 2025-06-02 23:43:32.306724
 """
 
 # isort: skip_file
-from typing import Sequence, Union
+from typing import Union
+from collections.abc import Sequence
 
 from alembic import op
 import sqlalchemy as sa

@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Literal
+from typing import Literal
 
 from bertopic import BERTopic
 from langgraph.types import Command
@@ -72,7 +72,7 @@ stopwords = [
 ]
 
 
-def _get_representive_docs_(info: DataFrame) -> Dict[int, str]:
+def _get_representive_docs_(info: DataFrame) -> dict[int, str]:
     """
     Arguments:
         info: the result of get_document_info from bertopic model

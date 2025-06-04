@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List
+from typing import Optional
 
 
 def _model_specific_prompt(model_name: str | None) -> str:
@@ -10,11 +10,13 @@ def _model_specific_prompt(model_name: str | None) -> str:
 
 def get_prompt(
     prompt_name: str,
-    model_name: str = None,
-) -> List[Dict]:
+    model_name: Optional[str] = None,
+) -> list[dict]:
     dir_name = os.path.dirname(__file__)
     try:
-        with open(os.path.join(dir_name, f"{prompt_name}.md"), "r") as f:
+        with open(
+            os.path.join(dir_name, f"{prompt_name}.md"), encoding="utf-8"
+        ) as f:
             return [
                 {
                     "role": "system",

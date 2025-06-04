@@ -27,7 +27,11 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
         # 已存在分类，直接跳过
         if entry_category:
             logger.info(f"entry {state['entry'].get('id')} has been tagged")
-            return Command(goto="score")
+            logger.info(f"Existing category: {entry_category.category}")
+            return Command(
+                update={"category": entry_category.category},
+                goto="score"
+            )
 
     messages = get_prompt("tagger")
     model_provider = config.MODEL_PROVIDER
@@ -43,9 +47,18 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
     pretty_response(response)
     logger.info(f"tagger node response: \n{response.pretty_repr()}")
 
-    category = get_response_property(response, "name")
+    try:
+        category = get_response_property(response, "name")
+        logger.info(f"Extracted category: {category}")
+    except Exception as e:
+        logger.exception("Failed to extract category from response:")
+        logger.exception(f"Response content: {response.content}")
+        # If we can't extract category, mark as 'other' to prevent total failure
+        category = "other"
+
     with Session(db) as session:
         try:
+            logger.info(f"About to save category: {category} for entry {state['entry'].get('id')}")
             _category = EntryCategory(
                 **{
                     "entry_id": state["entry"].get("id"),
@@ -54,11 +67,13 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
             )
             session.add(_category)
             session.commit()
+            logger.info("Successfully saved category")
         except Exception as e:
-            logger.error(f"tagger node error: {e}")
+            logger.exception("tagger node error:")
             session.rollback()
     if category == "other":
         return Command(goto="__end__")
+    logger.info("Returning command with category")
     return Command(
         update={"category": category},
         goto="score",

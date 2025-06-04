@@ -1,7 +1,7 @@
 import html
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Optional
 
 import feedparser
 import html2text
@@ -19,8 +19,8 @@ class RssReader:
         Args:
             proxy: 代理服务器地址，格式如 'http://127.0.0.1:7890'
         """
-        self.feed: Optional[Dict] = None
-        self.entries: List[Dict] = []
+        self.feed: Optional[dict] = None
+        self.entries: list[dict] = []
         self.proxy: Optional[str] = proxy
         self.html2markdown = html2text.HTML2Text()
         self.html2markdown.ignore_links = False  # 保留链接
@@ -30,9 +30,13 @@ class RssReader:
         # 设置代理
         if proxy:
             # 设置feedparser的代理
-            feedparser.USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            feedparser.USER_AGENT = (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124"
+                "Safari/537.36"
+            )
 
-    def _process_entry(self, entry: Dict) -> Dict:
+    def _process_entry(self, entry: dict) -> dict:
         """
         处理单个RSS条目，提取并转换字段
 
@@ -90,14 +94,14 @@ class RssReader:
             self.feed = self.feed.feed
             return True
         except Exception as e:
-            logging.error(f"解析RSS源时发生错误: {str(e)}")
+            logging.exception("解析RSS源时发生错误:")
             return False
 
     def update_feed_info(
         self,
         property: Optional[str] = None,
         value: Optional[str] = None,
-        feed_info: Optional[Dict] = None,
+        feed_info: Optional[dict] = None,
     ):
         """
         更新 feed 信息
@@ -118,7 +122,7 @@ class RssReader:
                 "Either feed_info or both property and value must be provided"
             )
 
-    def get_feed_info(self) -> Optional[Dict[str, str]]:
+    def get_feed_info(self) -> Optional[dict[str, str]]:
         """
         获取RSS源的基本信息
 
@@ -142,8 +146,8 @@ class RssReader:
         return feed_info
 
     def get_entries(
-        self, feed_info: Dict[str, str], limit: Optional[int] = None
-    ) -> List[Dict]:
+        self, feed_info: dict[str, str], limit: Optional[int] = None
+    ) -> list[dict]:
         """
         获取RSS条目列表
 
@@ -162,7 +166,7 @@ class RssReader:
         self,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """
         根据时间范围获取RSS条目列表
 

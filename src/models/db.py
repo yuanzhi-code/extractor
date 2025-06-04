@@ -41,7 +41,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
                 logger.warning("⚠️ 警告: 无法获取当前日志模式")
 
         except Exception as e:
-            logger.error(f"❌ 启用WAL模式时出错: {e}")
+            logger.exception("❌ 启用WAL模式时出错:")
         finally:
             cursor.close()
 

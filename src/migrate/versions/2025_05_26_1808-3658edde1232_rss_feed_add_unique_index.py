@@ -7,10 +7,10 @@ Create Date: 2025-05-26 18:08:46.076642
 """
 
 # isort: skip_file
-from typing import Sequence, Union
+from typing import Union
+from collections.abc import Sequence
 
 from alembic import op
-import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.

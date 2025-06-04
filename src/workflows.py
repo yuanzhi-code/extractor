@@ -2,15 +2,13 @@ import asyncio
 import datetime
 import logging
 
-from sqlalchemy.orm import Session
-
 from src.config import config
 from src.graph.classify_graph import run_classification_graph
-from src.models import db
+from src.models import get_session
 from src.models.rss_entry import RssEntry
 from src.models.tags import EntryCategory
 from src.rss.rss_reader import RssReader
-from src.sources import SourceConfig
+from src.sources import Source, SourceConfig
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +40,7 @@ async def fetch_task(max_workers: int = 10):
         rss_reader = RssReader(config.NETWORK_PROXY)
 
         source_config = SourceConfig(source_dir="./data")
-        entries = []
+        entries: list[dict] = []
         for source in source_config.sources:
             try:
                 new_entries = await source.parse(rss_reader)
@@ -51,8 +49,8 @@ async def fetch_task(max_workers: int = 10):
                 )
                 entries.extend(new_entries)
             except Exception as e:
-                logger.error(f"Error parsing source {source.name}: {e}")
-        with Session(db) as session:
+                logger.exception(f"Error parsing source {source.name}:")
+        with get_session() as session:
             today = datetime.datetime.today()
             _e = (
                 session.query(RssEntry)
@@ -67,12 +65,27 @@ async def fetch_task(max_workers: int = 10):
             entries.extend(db_entries)
         if not entries or len(entries) == 0:
             logger.info(
-                f"No new entries for source {source.name} to process, check the entries in database which may need to be process"
+                f"""No new entries for source {source.name} to process,
+                check the entries in database which may need to be process"""
             )
         return entries
     except Exception as e:
-        logger.error(f"Error fetching task: {e}")
+        logger.exception("Error fetching task:")
         raise
+
+
+async def run_crawl():
+    sources = SourceConfig(source_dir="./data")
+    rss_reader = RssReader(config.NETWORK_PROXY)
+
+    async def run_crawl_for_source(source: Source):
+        try:
+            await source.parse(rss_reader)
+        except Exception as e:
+            logger.exception(f"Error crawling source {source.name}:")
+
+    tasks = [run_crawl_for_source(source) for source in sources.sources]
+    await asyncio.gather(*tasks)
 
 
 async def run_graph(first: bool = True, entry_nums: int = 10):
@@ -115,7 +128,7 @@ async def run_graph(first: bool = True, entry_nums: int = 10):
                     logger.info(f"Successfully processed entry {entry.id}")
                     return {"entry_id": entry.id, "status": "success"}
                 except Exception as e:
-                    logger.error(f"Error processing entry {entry.id}: {e}")
+                    logger.exception(f"Error processing entry {entry.id}:")
                     return {
                         "entry_id": entry.id,
                         "status": "error",

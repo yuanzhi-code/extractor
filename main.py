@@ -9,7 +9,7 @@ from src.config import config
 from src.graph.reporter_graph import run_reporter_graph
 from src.llms import LLMFactory
 from src.utils.logger import setup_logger
-from src.workflows import run_graph
+from src.workflows import run_crawl, run_graph
 
 logger = setup_logger(__name__)
 
@@ -23,6 +23,11 @@ def arg_parser():
         "--graph",
         action="store_true",
         help="Enable test graph",
+    )
+    parser.add_argument(
+        "--crawl",
+        action="store_true",
+        help="Enable crawl",
     )
     return parser
 
@@ -61,7 +66,7 @@ def main():
     setup_logging()
     contents = []
     for md_file in Path("testdata").glob("*.md"):
-        with open(md_file, "r", encoding="utf-8") as f:
+        with open(md_file, encoding="utf-8") as f:
             contents.append(f.read())
     run_reporter_graph(contents)
 
@@ -71,5 +76,7 @@ if __name__ == "__main__":
     args = arg_parser().parse_args()
     if args.graph:
         asyncio.run(run_graph(False))
+    elif args.crawl:
+        asyncio.run(run_crawl())
     else:
         uvicorn.run("src.app:app", reload=False, log_level="info")

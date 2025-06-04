@@ -1,6 +1,6 @@
 import logging
 
-from langchain_core.messages import HumanMessage  # 新增导入
+from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,7 @@ def score_node(state: State):
     logger.info("score node start")
     prev_category = state.get("category")
     if prev_category is None:
+        logger.error("No category found in state - this indicates the tagger node did not properly set the category")
         raise ValueError("No category found")
 
     if prev_category not in ["tech", "business", "experience"]:

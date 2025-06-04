@@ -3,8 +3,8 @@ import json
 import logging
 import os
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Optional
 
 import backoff
 import requests
@@ -115,10 +115,10 @@ class Source:
 
             except Exception as e:
                 session.rollback()
-                logger.error(f"处理 feed 时发生错误: {e}")
+                logger.exception("处理 feed 时发生错误:")
                 raise
 
-    async def _crawl_entry(self, entries: List[dict]):
+    async def _crawl_entry(self, entries: list[dict]):
         """
         crawl entry content
         Args:
@@ -148,9 +148,7 @@ class Source:
             feed_updated = parse_feed_datetime(feed_updated)
 
         logger.info("a new feed is found, need to full sync")
-        today = datetime.now(timezone.utc).replace(
-            tzinfo=None
-        )  # 转换为 naive UTC
+        today = datetime.now(UTC).replace(tzinfo=None)  # 转换为 naive UTC
         end_date = today - timedelta(weeks=fetch_week)
 
         entries = rss_reader.get_entries_by_date(
@@ -263,7 +261,7 @@ class SourceConfig:
         source_path: Optional[str] = None,
         source_dir: Optional[str] = None,
     ):
-        self.sources = []
+        self.sources: list[Source] = []
         self._link_set: set[str] = set()
         if source_path is not None:
             self.from_json(source_path)
@@ -283,7 +281,7 @@ class SourceConfig:
         self.sources.append(source)
 
     def from_json(self, json_path: str):
-        with open(json_path, "r", encoding="utf-8") as f:
+        with open(json_path, encoding="utf-8") as f:
             data = json.load(f)
             if "sources" not in data:
                 raise ValueError("invalid json file")
