@@ -74,7 +74,7 @@ async def run_classification_graph(entry: RssEntry):
             if isinstance(s, dict) and "message" in s:
                 message = s["message"]
                 if isinstance(message, tuple):
-                    logger.info("message: {}", message)
+                    logger.info(f"message: {message}")
                 else:
                     message.pretty_print()
         except Exception as e:

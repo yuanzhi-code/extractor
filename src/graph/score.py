@@ -17,6 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 def score_node(state: ClassifyState):
+    """
+    score the entry
+    Args:
+        state: ClassifyState
+    Returns:
+        dict: {"result": ScorerOutput}
+    """
     logger.info("score node start")
     tag_result = state.get("tag_result")
     if tag_result is None:
@@ -44,10 +51,8 @@ def score_node(state: ClassifyState):
             "entry_id": state["entry"].id,
             "score": score,
         }
-        session.add(EntryScore(_score))
-        session.add(
-            EntrySummary(entry_id=state["entry"].id, summary=summary)
-        )
+        session.add(EntryScore(**_score))
+        session.add(EntrySummary(entry_id=state["entry"].id, summary=summary))
     if score == "noise":
         return Command(goto="__end__")
     return {"result": response}

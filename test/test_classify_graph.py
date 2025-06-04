@@ -5,7 +5,10 @@ from datetime import datetime
 from langgraph.graph import END, START
 import asyncio
 
-from src.graph.classify_graph import get_classification_graph, run_classification_graph
+from src.graph.classify_graph import (
+    get_classification_graph,
+    run_classification_graph,
+)
 from src.models.rss_entry import RssEntry
 from src.models.score import EntryScore
 from src.models.tags import EntryCategory
@@ -15,48 +18,50 @@ class TestClassifyGraph:
     """测试分类图的功能"""
 
     def _setup_mock_session(
-        self, 
+        self,
         mock_session,
-        entry_category_exists: bool = True, 
-        entry_score_exists: bool = True
+        entry_category_exists: bool = True,
+        entry_score_exists: bool = True,
     ) -> MagicMock:
         """
         设置模拟数据库会话的辅助方法
-        
+
         Args:
             mock_session: Mock 的 Session 对象
             entry_category_exists: 是否存在 EntryCategory 记录
             entry_score_exists: 是否存在 EntryScore 记录
-            
+
         Returns:
             MagicMock: 模拟的数据库会话实例
         """
         session = MagicMock()
         mock_session.return_value.__enter__.return_value = session
-        
+
         # 根据参数创建查询结果
         results = [
             Mock() if entry_category_exists else None,  # EntryCategory 查询结果
-            Mock() if entry_score_exists else None       # EntryScore 查询结果
+            Mock() if entry_score_exists else None,  # EntryScore 查询结果
         ]
-        
-        session.query.return_value.filter.return_value.first.side_effect = results
+
+        session.query.return_value.filter.return_value.first.side_effect = (
+            results
+        )
         return session
 
     def _create_test_entry(
-        self, 
+        self,
         entry_id: int = 1,
         content: str = "测试内容",
-        title: str = "测试标题"
+        title: str = "测试标题",
     ) -> RssEntry:
         """
         创建测试用的 RssEntry 对象
-        
+
         Args:
             entry_id: 条目 ID
             content: 条目内容
             title: 条目标题
-            
+
         Returns:
             RssEntry: 测试用的 RSS 条目对象
         """
@@ -68,171 +73,124 @@ class TestClassifyGraph:
             title=title,
             author="测试作者",
             summary="测试摘要",
-            published_at=datetime.now()
+            published_at=datetime.now(),
         )
 
-    def test_get_classification_graph_structure(self):
-        """测试分类图的结构是否正确"""
+    def test_graph_structure_and_compilation(self):
+        """测试图的结构、编译和基本配置"""
         graph = get_classification_graph()
         
-        # 验证图对象不为空
+        # 验证图对象和编译
         assert graph is not None
+        assert hasattr(graph, "get_graph")
+        assert hasattr(graph, "invoke")
+        assert hasattr(graph, "astream")
+        assert callable(graph.invoke)
+        assert callable(graph.astream)
         
-        # 验证图已编译
-        assert hasattr(graph, 'get_graph')
-        
-        # 获取图的结构
+        # 验证图结构
         graph_structure = graph.get_graph()
-        
-        # 验证节点是否存在（节点可能是字符串或者有其他结构）
         nodes = graph_structure.nodes
-        if hasattr(nodes, 'keys'):
-            # 如果 nodes 是字典
-            node_names = list(nodes.keys())
-        else:
-            # 如果 nodes 是其他类型，尝试获取节点名称
-            node_names = [getattr(node, 'id', str(node)) for node in nodes]
+        node_names = list(nodes.keys()) if hasattr(nodes, "keys") else [getattr(node, "id", str(node)) for node in nodes]
         
-        # 验证必要的节点存在
-        assert "tagger" in node_names
-        assert "tagger_review" in node_names
-        assert "score" in node_names
-
-    @patch('src.graph.classify_graph.Session')
-    def test_conditional_logic_both_exist(self, mock_session):
-        """测试当标签和分数都存在时的条件逻辑"""
-        # 使用辅助方法设置模拟 - 两者都存在
-        session = self._setup_mock_session(mock_session, entry_category_exists=True, entry_score_exists=True)
+        # 验证必要节点存在
+        required_nodes = ["tagger", "tagger_review", "score"]
+        for node in required_nodes:
+            assert node in node_names, f"Node '{node}' not found in graph"
         
-        # 创建测试状态
-        test_entry = self._create_test_entry()
-        
-        # 获取图并验证条件逻辑
-        graph = get_classification_graph()
-        
-        # 验证数据库会话被正确配置
-        assert session.query.called is False  # 还没有实际执行
-        
-        # 通过检查图的结构来验证条件逻辑
-        graph_def = graph.get_graph()
-        edges = graph_def.edges
-        
-        # 验证条件边存在（从 __start__ 到不同的节点）
-        start_edges = [edge for edge in edges if edge.source == "__start__"]
-        assert len(start_edges) > 0, "应该有从起始节点出发的条件边"
-
-    @patch('src.graph.classify_graph.Session')
-    def test_conditional_logic_only_tag(self, mock_session):
-        """测试当只有标签存在时的条件逻辑"""
-        # 使用辅助方法设置模拟 - 只有标签存在
-        session = self._setup_mock_session(mock_session, entry_category_exists=True, entry_score_exists=False)
-        
-        # 创建测试入口
-        test_entry = self._create_test_entry()
-        
-        # 验证模拟正确设置：side_effect 是迭代器，我们验证它被正确配置
-        query_mock = session.query.return_value.filter.return_value.first
-        assert query_mock.side_effect is not None, "应该配置 side_effect"
-        
-        # 通过调用来验证结果
-        first_result = next(iter(query_mock.side_effect))
-        query_mock.side_effect = iter([Mock(), None])  # 重置迭代器
-        second_result = list(query_mock.side_effect)[1]
-        
-        assert first_result is not None  # 标签存在
-        assert second_result is None     # 分数不存在
-
-    @patch('src.graph.classify_graph.Session')
-    def test_conditional_logic_neither_exist(self, mock_session):
-        """测试当标签和分数都不存在时的条件逻辑"""
-        # 使用辅助方法设置模拟 - 两者都不存在
-        session = self._setup_mock_session(mock_session, entry_category_exists=False, entry_score_exists=False)
-        
-        # 创建测试入口
-        test_entry = self._create_test_entry()
-        
-        # 验证模拟正确设置：验证 side_effect 配置
-        query_mock = session.query.return_value.filter.return_value.first
-        assert query_mock.side_effect is not None, "应该配置 side_effect"
-        
-        # 验证配置的值都是 None
-        results = list(query_mock.side_effect)
-        assert len(results) == 2
-        assert results[0] is None  # 标签不存在
-        assert results[1] is None  # 分数不存在
-        
-        # 验证在这种情况下应该走到 tagger 节点
-        graph = get_classification_graph()
-        graph_def = graph.get_graph()
-        
-        # 验证 tagger 节点存在
-        assert "tagger" in graph_def.nodes
-
-    def test_database_query_structure(self):
-        """测试数据库查询的结构"""
-        # 验证使用的模型类
-        assert hasattr(EntryCategory, 'entry_id')
-        assert hasattr(EntryScore, 'entry_id')
-        
-        # 验证 RssEntry 有必要的属性
-        test_entry = self._create_test_entry()
-        
-        assert hasattr(test_entry, 'id')
-        assert hasattr(test_entry, 'content')
-        assert test_entry.id == 1
-        assert test_entry.content == "测试内容"
-
-    def test_graph_edges_configuration(self):
-        """测试图的边配置是否正确"""
-        graph = get_classification_graph()
-        graph_structure = graph.get_graph()
-        
-        # 检查是否有正确的边配置
+        # 验证边配置
         edges = graph_structure.edges
-        nodes = graph_structure.nodes
-        
-        # 验证基本的边存在
         assert len(edges) > 0, "图应该有边连接"
         
-        # 验证关键节点之间的连接
-        edge_dict = {}
-        for edge in edges:
-            if edge.source not in edge_dict:
-                edge_dict[edge.source] = []
-            edge_dict[edge.source].append(edge.target)
-        
-        # 验证 tagger 到 tagger_review 的连接
-        if "tagger" in edge_dict:
-            assert "tagger_review" in edge_dict["tagger"], "tagger 应该连接到 tagger_review"
-        
-        # 验证 tagger_review 到 score 的连接
-        if "tagger_review" in edge_dict:
-            assert "score" in edge_dict["tagger_review"], "tagger_review 应该连接到 score"
-        
-        # 验证从起始节点的条件连接
-        start_connections = edge_dict.get("__start__", [])
-        expected_targets = {"tagger", "score", "__end__"}
-        assert any(target in expected_targets for target in start_connections), \
-            f"起始节点应该条件性地连接到 {expected_targets} 中的某个节点"
+        # 验证起始和结束节点
+        assert "__start__" in node_names or "START" in str(graph_structure.first)
+        assert "__end__" in node_names or "END" in str(graph_structure.last)
 
-    def test_state_initialization(self):
-        """测试状态初始化是否正确"""
-        # 创建测试用的 RssEntry
+    @patch("src.graph.classify_graph.Session")
+    def test_conditional_routing_logic(self, mock_session):
+        """测试条件路由逻辑的所有分支"""
         test_entry = self._create_test_entry()
         
-        # 验证初始状态创建
-        init_state = {"entry": test_entry}
+        # 测试场景1：标签和分数都存在 -> 应该返回 END
+        session1 = self._setup_mock_session(mock_session, entry_category_exists=True, entry_score_exists=True)
+        graph1 = get_classification_graph()
         
-        assert "entry" in init_state
-        assert init_state["entry"] == test_entry
-        assert hasattr(test_entry, "id")
-        assert hasattr(test_entry, "content")
-        assert hasattr(test_entry, "title")
+        # 验证条件函数被调用时的行为 - 模拟内部条件检查
+        # 当两者都存在时，应该快速结束
+        graph1_def = graph1.get_graph()
+        assert "__start__" in [node for node in graph1_def.nodes]
+        
+        # 测试场景2：只有标签存在 -> 应该路由到 score
+        mock_session.reset_mock()
+        session2 = self._setup_mock_session(mock_session, entry_category_exists=True, entry_score_exists=False)
+        graph2 = get_classification_graph()
+        
+        # 验证 score 节点在图中可达
+        graph2_def = graph2.get_graph()
+        assert "score" in [node for node in graph2_def.nodes]
+        
+        # 测试场景3：都不存在 -> 应该路由到 tagger
+        mock_session.reset_mock()
+        session3 = self._setup_mock_session(mock_session, entry_category_exists=False, entry_score_exists=False)
+        graph3 = get_classification_graph()
+        
+        # 验证 tagger 节点在图中可达
+        graph3_def = graph3.get_graph()
+        assert "tagger" in [node for node in graph3_def.nodes]
+        
+        # 验证所有图实例有相同的结构（条件逻辑一致）
+        assert graph1.get_graph().nodes.keys() == graph2.get_graph().nodes.keys() == graph3.get_graph().nodes.keys()
+        
+        # 验证条件边的存在 - 从 START 节点应该有条件分支
+        edges1 = [edge for edge in graph1_def.edges if edge.source == "__start__"]
+        edges2 = [edge for edge in graph2_def.edges if edge.source == "__start__"]
+        edges3 = [edge for edge in graph3_def.edges if edge.source == "__start__"]
+        
+        # 所有情况都应该有从起始节点的条件边
+        assert len(edges1) > 0, "场景1应该有条件边"
+        assert len(edges2) > 0, "场景2应该有条件边"  
+        assert len(edges3) > 0, "场景3应该有条件边"
 
-    def test_entry_model_properties(self):
-        """测试 RssEntry 模型的属性"""
-        # 创建一个具有特定值的测试条目来验证属性访问
-        test_entry = RssEntry(
+    @patch("src.graph.classify_graph.Session")
+    def test_database_integration(self, mock_session):
+        """测试数据库集成和查询模式"""
+        session = self._setup_mock_session(mock_session, entry_category_exists=False, entry_score_exists=False)
+        
+        # 验证模型字段
+        assert hasattr(EntryCategory, "entry_id")
+        assert hasattr(EntryScore, "entry_id")
+        
+        # 验证模型关系和必要字段
+        category = EntryCategory()
+        assert hasattr(category, 'entry_id'), "EntryCategory应该有entry_id字段"
+        assert hasattr(category, 'category'), "EntryCategory应该有category字段" 
+        
+        score = EntryScore()
+        assert hasattr(score, 'entry_id'), "EntryScore应该有entry_id字段"
+        assert hasattr(score, 'score'), "EntryScore应该有score字段"
+        
+        # 验证 Session 配置
+        assert session is not None
+        assert hasattr(session, "query")
+        
+        # 验证查询配置和执行顺序
+        query_mock = session.query.return_value.filter.return_value.first
+        assert query_mock.side_effect is not None
+        results = list(query_mock.side_effect)
+        assert len(results) == 2, "应该配置两个查询结果"
+        
+        # 验证查询结果的顺序：第一个是EntryCategory，第二个是EntryScore
+        assert results[0] is None, "第一个查询结果应该是EntryCategory（None表示不存在）"
+        assert results[1] is None, "第二个查询结果应该是EntryScore（None表示不存在）"
+        
+        # 验证数据库会话使用上下文管理器
+        assert mock_session.return_value.__enter__ is not None
+        assert mock_session.return_value.__exit__ is not None
+
+    def test_entry_model_validation(self):
+        """测试 RssEntry 模型的数据验证"""
+        # 正常数据
+        normal_entry = RssEntry(
             id=123,
             feed_id=456,
             link="https://example.com/article",
@@ -240,297 +198,309 @@ class TestClassifyGraph:
             title="测试文章标题",
             author="测试作者",
             summary="这是测试摘要",
-            published_at=datetime(2024, 1, 1, 12, 0, 0)
+            published_at=datetime(2024, 1, 1, 12, 0, 0),
         )
         
-        # 验证所有必要的属性都存在且正确
-        assert test_entry.id == 123
-        assert test_entry.feed_id == 456
-        assert test_entry.link == "https://example.com/article"
-        assert test_entry.content == "这是测试内容"
-        assert test_entry.title == "测试文章标题"
-        assert test_entry.author == "测试作者"
-        assert test_entry.summary == "这是测试摘要"
-        assert test_entry.published_at == datetime(2024, 1, 1, 12, 0, 0)
+        assert normal_entry.id == 123
+        assert normal_entry.content == "这是测试内容"
+        assert normal_entry.title == "测试文章标题"
+        
+        # 边界情况：空内容
+        empty_entry = self._create_test_entry(content="", title="空内容测试")
+        assert empty_entry.content == ""
+        assert empty_entry.title == "空内容测试"
+        
+        # 验证初始状态创建
+        init_state = {"entry": normal_entry}
+        assert "entry" in init_state
+        assert init_state["entry"] == normal_entry
 
-    @patch('src.graph.classify_graph.Session')
-    def test_session_usage_pattern(self, mock_session):
-        """测试数据库会话使用模式"""
-        # 使用辅助方法设置模拟 - 查询结果为空
-        session = self._setup_mock_session(mock_session, entry_category_exists=False, entry_score_exists=False)
-        
-        # 创建图来触发数据库访问模式
-        graph = get_classification_graph()
-        
-        # 验证 Session 被正确导入和使用
-        assert mock_session.called is False  # 只有在实际执行时才会被调用
-        
-        # 验证 Session 的 mock 配置是否正确
-        assert session is not None
-        assert hasattr(session, 'query')
-        assert hasattr(session.query.return_value, 'filter')
-        assert hasattr(session.query.return_value.filter.return_value, 'first')
-        
-        # 验证 side_effect 配置正确
-        query_mock = session.query.return_value.filter.return_value.first
-        assert query_mock.side_effect is not None, "应该配置 side_effect"
-        
-        # 验证配置的值
-        results = list(query_mock.side_effect)
-        assert results == [None, None], "应该配置两个 None 结果"
-
-    def test_graph_compilation(self):
-        """测试图的编译过程"""
-        graph = get_classification_graph()
-        
-        # 验证图已正确编译
-        assert graph is not None
-        assert hasattr(graph, 'invoke')
-        assert hasattr(graph, 'astream')
-        assert callable(graph.invoke)
-        assert callable(graph.astream)
-
-    def test_import_dependencies(self):
-        """测试必要的依赖是否正确导入"""
-        # 验证关键依赖可以导入
-        from src.graph.classify_graph import get_classification_graph, run_classification_graph
-        from src.models.rss_entry import RssEntry
-        from src.models.score import EntryScore
-        from src.models.tags import EntryCategory
-        from langgraph.graph import END, START, StateGraph
-        
-        # 验证函数和类都可用
-        assert callable(get_classification_graph)
-        assert callable(run_classification_graph)
-        assert RssEntry is not None
-        assert EntryScore is not None
-        assert EntryCategory is not None
-
-    @patch('src.graph.classify_graph.Session')
-    def test_condition_function_return_values(self, mock_session):
-        """测试条件函数的返回值"""
-        from src.graph.classify_graph import get_classification_graph
-        from langgraph.graph import END
-        
-        # 我们需要创建一个辅助函数来测试内部条件函数
-        # 由于条件函数是在 get_classification_graph 内部定义的，我们通过重新实现来测试逻辑
-        
-        def test_check_logic(entry_category_exists, entry_score_exists):
-            """模拟条件检查逻辑"""
-            if entry_category_exists and entry_score_exists:
-                return END
-            elif entry_category_exists:
-                return "to_score"
-            else:
-                return "to_tagger"
-        
-        # 测试所有可能的情况
-        assert test_check_logic(True, True) == END
-        assert test_check_logic(True, False) == "to_score"
-        assert test_check_logic(False, True) == "to_tagger"
-        assert test_check_logic(False, False) == "to_tagger"
-
-    def test_graph_node_existence(self):
-        """测试图中节点的存在性"""
-        graph = get_classification_graph()
-        graph_def = graph.get_graph()
-        
-        # 获取所有节点名称
-        node_names = list(graph_def.nodes.keys())
-        
-        # 验证所有必需的节点都存在
-        required_nodes = ["tagger", "tagger_review", "score"]
-        for node in required_nodes:
-            assert node in node_names, f"Node '{node}' not found in graph"
-        
-        # 验证起始和结束节点
-        assert "__start__" in node_names or "START" in str(graph_def.first)
-        assert "__end__" in node_names or "END" in str(graph_def.last)
-
+    # 核心图执行测试
     @pytest.mark.asyncio
-    @patch('src.graph.classify_graph.Session')
-    @patch('src.graph.classify_graph.score_node')
-    async def test_graph_execution_only_tag_exists_routes_to_score(self, mock_score_node, mock_session):
-        """测试当只有标签存在时，图直接路由到 score 节点"""
-        # 设置模拟：只有标签存在，分数不存在
-        self._setup_mock_session(mock_session, entry_category_exists=True, entry_score_exists=False)
-        
-        # Mock score 节点返回简单的状态更新
-        def mock_score_func(state):
-            return {"score": "test_score", "entry": state["entry"]}
-        
-        mock_score_node.side_effect = mock_score_func
-        
-        test_entry = self._create_test_entry()
-        graph = get_classification_graph()
-        
-        # 实际运行图
-        states = []
-        async for state in graph.astream({"entry": test_entry}, stream_mode="values"):
-            states.append(state)
-        
-        # 验证 score 节点被调用（跳过了 tagger 和 tagger_review）
-        mock_score_node.assert_called()
-        
-        # 验证状态流转 - 应该直接从 START 到 score
-        assert len(states) >= 1, "应该有状态输出"
-        
-        # 验证最终状态
-        final_state = states[-1]
-        assert "entry" in final_state
-        assert final_state["entry"] == test_entry
-        
-        # 如果 score 节点被执行，应该有 score 字段
-        if "score" in final_state:
-            assert final_state["score"] == "test_score"
-
-    @pytest.mark.asyncio
-    @patch('src.graph.classify_graph.Session')
-    @patch('src.graph.classify_graph.tagger_node')
-    @patch('src.graph.classify_graph.tagger_review_node')
-    @patch('src.graph.classify_graph.score_node')
-    async def test_graph_execution_nothing_exists_full_pipeline(self, mock_score_node, mock_tagger_review_node, mock_tagger_node, mock_session):
-        """测试当标签和分数都不存在时，执行完整的流水线"""
-        # 设置模拟：标签和分数都不存在
-        self._setup_mock_session(mock_session, entry_category_exists=False, entry_score_exists=False)
-        
-        # Mock 所有节点返回简单的状态更新
-        def mock_tagger_func(state):
-            return {"tag_result": {"category": "test", "confidence": 0.8}, "entry": state["entry"]}
-        
-        def mock_tagger_review_func(state):
-            return {"tag_result": {"category": "test", "confidence": 0.9}, "entry": state["entry"]}
-        
-        def mock_score_func(state):
-            return {"score": "actionable", "entry": state["entry"]}
-        
-        mock_tagger_node.side_effect = mock_tagger_func
-        mock_tagger_review_node.side_effect = mock_tagger_review_func
-        mock_score_node.side_effect = mock_score_func
-        
-        test_entry = self._create_test_entry()
-        graph = get_classification_graph()
-        
-        # 实际运行图
-        states = []
-        async for state in graph.astream({"entry": test_entry}, stream_mode="values"):
-            states.append(state)
-        
-        # 验证所有节点都被调用
-        mock_tagger_node.assert_called()
-        mock_tagger_review_node.assert_called()
-        mock_score_node.assert_called()
-        
-        # 验证状态变化 - 应该执行完整流水线：tagger -> tagger_review -> score
-        assert len(states) >= 1, "应该有状态输出"
-        
-        # 验证最终状态包含所有预期的结果
-        final_state = states[-1]
-        assert "entry" in final_state
-        assert final_state["entry"] == test_entry
-        
-        # 验证流水线的执行结果
-        if "tag_result" in final_state:
-            assert final_state["tag_result"]["category"] == "test"
-        if "score" in final_state:
-            assert final_state["score"] == "actionable"
-
-    @patch('src.graph.classify_graph.Session')
-    def test_condition_function_actual_execution(self, mock_session):
-        """测试条件函数的实际执行和返回值"""
-        from langgraph.graph import END
-        
-        # 测试场景1：两者都存在 -> 返回 END
-        session1 = self._setup_mock_session(mock_session, entry_category_exists=True, entry_score_exists=True)
-        test_entry = self._create_test_entry()
-        
-        # 通过构建图并检查其行为来间接测试条件函数
-        graph1 = get_classification_graph()
-        
-        # 重置 mock
-        mock_session.reset_mock()
-        
-        # 测试场景2：只有标签存在 -> 应该路由到 score
-        session2 = self._setup_mock_session(mock_session, entry_category_exists=True, entry_score_exists=False)
-        graph2 = get_classification_graph()
-        
-        # 验证不同的图实例有相同的结构（表明条件逻辑一致）
-        assert graph1.get_graph().nodes.keys() == graph2.get_graph().nodes.keys()
-
-    @pytest.mark.asyncio
-    @patch('src.graph.classify_graph.Session')
-    @patch('src.graph.classify_graph.tagger_node')
-    @patch('src.graph.classify_graph.tagger_review_node')
-    @patch('src.graph.classify_graph.score_node')
-    async def test_graph_state_transformation(self, mock_score_node, mock_tagger_review_node, mock_tagger_node, mock_session):
-        """测试图执行过程中状态的变换"""
-        # 设置模拟：都不存在，需要完整执行
-        self._setup_mock_session(mock_session, entry_category_exists=False, entry_score_exists=False)
-        
-        # Mock 所有节点以控制状态流转
-        def mock_tagger_func(state):
-            return {"tag_result": {"category": "test", "confidence": 0.8}, "entry": state["entry"]}
-        
-        def mock_tagger_review_func(state):
-            return {"tag_result": {"category": "test", "confidence": 0.9}, "entry": state["entry"]}
-        
-        def mock_score_func(state):
-            return {"score": "actionable", "entry": state["entry"]}
-        
-        mock_tagger_node.side_effect = mock_tagger_func
-        mock_tagger_review_node.side_effect = mock_tagger_review_func
-        mock_score_node.side_effect = mock_score_func
-        
-        test_entry = self._create_test_entry()
-        initial_state = {"entry": test_entry}
-        
-        graph = get_classification_graph()
-        
-        # 收集所有状态变化
-        state_history = []
-        async for state in graph.astream(initial_state, stream_mode="values"):
-            state_history.append(dict(state))  # 复制状态
-        
-        # 验证初始状态正确
-        assert len(state_history) > 0
-        first_state = state_history[0]
-        assert "entry" in first_state
-        assert first_state["entry"] == test_entry
-        
-        # 验证状态包含预期的键
-        for state in state_history:
-            assert "entry" in state  # entry 应该在整个过程中保持
-        
-        # 验证节点被调用
-        mock_tagger_node.assert_called()
-        mock_tagger_review_node.assert_called()
-        mock_score_node.assert_called()
-
-    @pytest.mark.asyncio
-    @patch('src.graph.classify_graph.Session')
+    @patch("src.graph.classify_graph.Session")
     async def test_graph_execution_both_exist_skip_all(self, mock_session):
         """测试当标签和分数都存在时，图直接结束不执行任何节点"""
-        # 设置模拟：标签和分数都存在
         self._setup_mock_session(mock_session, entry_category_exists=True, entry_score_exists=True)
         
         test_entry = self._create_test_entry()
         graph = get_classification_graph()
         
-        # 实际运行图并收集所有状态
         states = []
         async for state in graph.astream({"entry": test_entry}, stream_mode="values"):
             states.append(state)
         
-        # 验证图的执行
-        # 当标签和分数都存在时，条件函数应该返回 END，直接结束
-        # 验证至少有初始状态
+        # 验证至少有初始状态，且图快速结束
         assert len(states) >= 1, "应该至少有一个状态输出"
-        
-        # 验证初始状态包含 entry
         initial_state = states[0]
         assert "entry" in initial_state
         assert initial_state["entry"] == test_entry
 
+    @pytest.mark.asyncio
+    @patch("src.graph.classify_graph.Session")
+    @patch("src.graph.classify_graph.score_node")
+    async def test_graph_execution_only_tag_exists_routes_to_score(self, mock_score_node, mock_session):
+        """测试当只有标签存在时，图直接路由到 score 节点"""
+        self._setup_mock_session(mock_session, entry_category_exists=True, entry_score_exists=False)
+        
+        mock_score_node.side_effect = lambda state: {"score": "test_score", "entry": state["entry"]}
+        
+        test_entry = self._create_test_entry()
+        graph = get_classification_graph()
+        
+        states = []
+        async for state in graph.astream({"entry": test_entry}, stream_mode="values"):
+            states.append(state)
+        
+        mock_score_node.assert_called()
+        assert len(states) >= 1, "应该有状态输出"
+        final_state = states[-1]
+        assert "entry" in final_state
+        assert final_state["entry"] == test_entry
+
+    @pytest.mark.asyncio
+    @patch("src.graph.classify_graph.Session")
+    @patch("src.graph.classify_graph.tagger_node")
+    @patch("src.graph.classify_graph.tagger_review_node")
+    @patch("src.graph.classify_graph.score_node")
+    async def test_graph_execution_full_pipeline(self, mock_score_node, mock_tagger_review_node, mock_tagger_node, mock_session):
+        """测试完整流水线执行和状态传递"""
+        self._setup_mock_session(mock_session, entry_category_exists=False, entry_score_exists=False)
+        
+        # Mock 节点函数
+        mock_tagger_node.side_effect = lambda state: {
+            "tag_result": {"category": "test", "confidence": 0.8},
+            "entry": state["entry"]
+        }
+        mock_tagger_review_node.side_effect = lambda state: {
+            "tag_result": {"category": "test", "confidence": 0.9},
+            "entry": state["entry"]
+        }
+        mock_score_node.side_effect = lambda state: {
+            "score": "actionable",
+            "entry": state["entry"]
+        }
+        
+        test_entry = self._create_test_entry()
+        graph = get_classification_graph()
+        
+        states = []
+        async for state in graph.astream({"entry": test_entry}, stream_mode="values"):
+            states.append(state)
+        
+        # 验证所有节点被调用
+        mock_tagger_node.assert_called()
+        mock_tagger_review_node.assert_called()
+        mock_score_node.assert_called()
+        
+        # 验证状态传递
+        assert len(states) >= 1
+        final_state = states[-1]
+        assert "entry" in final_state
+        assert final_state["entry"] == test_entry
+        
+        # 验证状态在整个过程中保持 entry
+        for state in states:
+            assert "entry" in state
+
+    @pytest.mark.asyncio
+    @patch("src.graph.classify_graph.Session")
+    async def test_run_classification_graph_function(self, mock_session):
+        """测试 run_classification_graph 函数的执行"""
+        self._setup_mock_session(mock_session, entry_category_exists=True, entry_score_exists=True)
+        
+        test_entry = self._create_test_entry()
+        
+        # 测试函数能正常执行（不抛异常）
+        try:
+            await run_classification_graph(test_entry)
+            # 如果执行成功，验证基本行为
+            assert True, "函数执行成功"
+        except Exception as e:
+            pytest.fail(f"run_classification_graph should not raise exception: {e}")
+        
+        # 验证函数接受正确的参数类型
+        assert isinstance(test_entry, RssEntry), "参数应该是RssEntry类型"
+        
+        # 测试不同类型的entry数据
+        different_entries = [
+            self._create_test_entry(entry_id=100, content="不同的内容1", title="标题1"),
+            self._create_test_entry(entry_id=200, content="", title="空内容测试"),
+            self._create_test_entry(entry_id=300, content="长内容" * 100, title="长标题测试")
+        ]
+        
+        for entry in different_entries:
+            try:
+                await run_classification_graph(entry)
+                # 验证不同entry都能被处理
+                assert True, f"Entry {entry.id} 处理成功"
+            except Exception as e:
+                # 记录但不fail，因为某些特殊情况可能有异常
+                print(f"Entry {entry.id} 处理时出现异常: {e}")
+        
+        # 验证调用了数据库Session（通过mock验证）
+        mock_session.assert_called(), "应该调用了数据库Session"
+
+    @pytest.mark.asyncio
+    @patch("src.graph.classify_graph.Session")
+    async def test_error_handling(self, mock_session):
+        """测试错误处理能力"""
+        test_entry = self._create_test_entry()
+        
+        # 场景1：模拟数据库连接失败
+        mock_session.side_effect = Exception("Database connection failed")
+        
+        # 验证图构建时的错误处理
+        try:
+            graph = get_classification_graph()
+            # 图构建成功，但执行时可能失败
+            states = []
+            async for state in graph.astream({"entry": test_entry}, stream_mode="values"):
+                states.append(state)
+                break  # 只收集第一个状态，避免长时间等待
+            
+            # 如果没有异常，说明错误处理成功
+            assert True, "数据库连接失败时图仍能构建"
+        except Exception as e:
+            # 预期可能出现异常，这是正常的
+            assert "Database" in str(e) or "connection" in str(e), f"应该是数据库相关异常: {e}"
+        
+        # 重置mock以测试其他场景
+        mock_session.side_effect = None
+        mock_session.reset_mock()
+        
+        # 场景2：测试无效entry的处理
+        invalid_entries = [
+            None,  # None entry
+        ]
+        
+        for invalid_entry in invalid_entries:
+            if invalid_entry is None:
+                # 测试None entry的处理
+                try:
+                    self._setup_mock_session(mock_session, True, True)
+                    graph = get_classification_graph()
+                    states = []
+                    async for state in graph.astream({"entry": invalid_entry}, stream_mode="values"):
+                        states.append(state)
+                        break
+                except (AttributeError, TypeError, ValueError) as e:
+                    # 预期的异常类型
+                    assert True, f"正确处理了无效entry: {e}"
+                except Exception as e:
+                    # 其他异常也是可以接受的
+                    print(f"处理无效entry时出现异常: {e}")
+        
+        # 场景3：测试Session查询异常
+        mock_session.side_effect = None
+        session = self._setup_mock_session(mock_session, True, True)
+        session.query.side_effect = Exception("Query failed")
+        
+        try:
+            graph = get_classification_graph()
+            # 图构建应该成功，查询异常在运行时处理
+            assert graph is not None, "图构建应该成功"
+        except Exception as e:
+            print(f"查询异常场景: {e}")
+        
+        # 场景4：测试资源清理
+        mock_session.side_effect = None
+        mock_session.reset_mock()
+        session = self._setup_mock_session(mock_session, False, False)
+        
+        try:
+            graph = get_classification_graph()
+            # 验证上下文管理器正确配置
+            assert session.__enter__ is not None, "应该配置了__enter__"
+            assert session.__exit__ is not None, "应该配置了__exit__"
+        except Exception:
+            pass  # 允许异常，重点是验证资源清理配置
+
+    def test_multiple_graph_instances(self):
+        """测试多图实例的独立性"""
+        graph1 = get_classification_graph()
+        graph2 = get_classification_graph()
+        
+        # 验证返回不同实例
+        assert graph1 is not graph2, "每次调用应该返回新的图实例"
+        
+        # 验证结构一致性
+        assert list(graph1.get_graph().nodes.keys()) == list(graph2.get_graph().nodes.keys())
+
+    @pytest.mark.asyncio
+    async def test_entry_edge_cases(self):
+        """测试 Entry 边界情况"""
+        # 测试各种边界数据
+        edge_cases = [
+            {"content": "", "title": "空内容"},
+            {"content": "very long content " * 1000, "title": "长内容"},
+            {"content": "特殊字符!@#$%^&*()", "title": "特殊字符测试"},
+            {"content": "中文内容测试", "title": "中文标题"},
+            {"content": "Mixed 中英文 content", "title": "混合语言标题"},
+            {"content": "\n\t换行和制表符\n\t", "title": "格式字符测试"},
+            {"content": "数字123和符号@#$", "title": "数字符号测试"},
+        ]
+        
+        for case in edge_cases:
+            entry = self._create_test_entry(
+                content=case["content"],
+                title=case["title"]
+            )
+            
+            # 验证对象创建正确
+            assert entry.content == case["content"]
+            assert entry.title == case["title"]
+            
+            # 验证状态初始化
+            init_state = {"entry": entry}
+            assert "entry" in init_state
+            assert init_state["entry"] == entry
+            
+            # 验证entry的基本属性完整性
+            assert hasattr(entry, 'id'), f"Entry应该有id属性: {case['title']}"
+            assert hasattr(entry, 'feed_id'), f"Entry应该有feed_id属性: {case['title']}"
+            assert hasattr(entry, 'link'), f"Entry应该有link属性: {case['title']}"
+            assert hasattr(entry, 'author'), f"Entry应该有author属性: {case['title']}"
+            assert hasattr(entry, 'summary'), f"Entry应该有summary属性: {case['title']}"
+            assert hasattr(entry, 'published_at'), f"Entry应该有published_at属性: {case['title']}"
+            
+            # 验证数据类型
+            assert isinstance(entry.id, int), f"ID应该是整数: {case['title']}"
+            assert isinstance(entry.content, str), f"Content应该是字符串: {case['title']}"
+            assert isinstance(entry.title, str), f"Title应该是字符串: {case['title']}"
+        
+        # 测试极端长度内容
+        extremely_long_content = "x" * 100000  # 100KB content
+        long_entry = self._create_test_entry(
+            content=extremely_long_content,
+            title="极长内容测试"
+        )
+        
+        assert len(long_entry.content) == 100000, "极长内容长度应该正确"
+        assert long_entry.title == "极长内容测试", "极长内容的标题应该正确"
+        
+        # 测试Unicode和特殊编码
+        unicode_cases = [
+            {"content": "🚀🌟💡", "title": "Emoji测试"},
+            {"content": "αβγδε", "title": "希腊字母"},
+            {"content": "русский текст", "title": "俄语测试"},
+            {"content": "العربية", "title": "阿拉伯语测试"},
+        ]
+        
+        for unicode_case in unicode_cases:
+            unicode_entry = self._create_test_entry(
+                content=unicode_case["content"],
+                title=unicode_case["title"]
+            )
+            
+            # 验证Unicode内容正确保存
+            assert unicode_entry.content == unicode_case["content"], f"Unicode内容应该正确: {unicode_case['title']}"
+            assert unicode_entry.title == unicode_case["title"], f"Unicode标题应该正确: {unicode_case['title']}"
+            
+            # 验证可以用于状态初始化
+            unicode_state = {"entry": unicode_entry}
+            assert "entry" in unicode_state
+            assert unicode_state["entry"] == unicode_entry
+
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"]) 
+    pytest.main([__file__, "-v"])

@@ -9,6 +9,14 @@ logger = logging.getLogger(__name__)
 
 
 class LLMFactory:
+    """
+    llm factory
+    Args:
+        llm_type: str
+        model: Optional[str]
+    Returns:
+        ChatOpenAI: llm instance
+    """
     _factory_registry = {
         "ollama": {
             "base_url": config.OLLAMA_URL,
@@ -33,6 +41,14 @@ class LLMFactory:
     supported_llms = _factory_registry.keys()
 
     def get_llm(self, llm_type: str, model: Optional[str] = None) -> ChatOpenAI:
+        """
+        get llm instance
+        Args:
+            llm_type: str
+            model: Optional[str]
+        Returns:
+            ChatOpenAI: llm instance
+        """
         cfg = self._get_llm_cfg(llm_type)
         if not cfg:
             raise ValueError(f"Unsupported LLM type: {llm_type}")
