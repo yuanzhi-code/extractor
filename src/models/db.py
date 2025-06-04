@@ -1,6 +1,8 @@
 import os
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
+
 from src.config import config
 from src.utils.logger import setup_logger
 

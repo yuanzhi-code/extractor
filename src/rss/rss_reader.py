@@ -1,6 +1,5 @@
 import html
 import logging
-import os
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -8,7 +7,7 @@ import feedparser
 import html2text
 import requests
 
-from src.crawl import WebContentExtractor, scrape_sync
+from src.crawl import WebContentExtractor
 
 
 class RssReader:

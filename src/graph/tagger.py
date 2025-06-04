@@ -10,7 +10,6 @@ from src.graph._utils import get_response_property, pretty_response
 from src.graph.state import State
 from src.llms.factory import LLMFactory
 from src.models import db
-from src.models.rss_entry import RssEntry
 from src.models.tags import EntryCategory
 from src.prompts.prompts import get_prompt
 
@@ -56,6 +55,7 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
             session.add(_category)
             session.commit()
         except Exception as e:
+            logger.error(f"tagger node error: {e}")
             session.rollback()
     if category == "other":
         return Command(goto="__end__")

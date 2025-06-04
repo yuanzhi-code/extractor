@@ -4,13 +4,12 @@ import logging
 import os
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
-from sqlite3 import IntegrityError
 from typing import List, Optional
 
 import backoff
 import requests
-from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from src.crawl.crawl import scrape_website_to_markdown
 from src.models import db

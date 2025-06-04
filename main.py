@@ -7,9 +7,9 @@ import uvicorn
 
 from src.config import config
 from src.graph.reporter_graph import run_reporter_graph
-from src.workflows import run_graph
 from src.llms import LLMFactory
 from src.utils.logger import setup_logger
+from src.workflows import run_graph
 
 logger = setup_logger(__name__)
 

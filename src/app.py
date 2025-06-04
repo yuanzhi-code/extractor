@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
         id="tagger task",
     )
     scheduler.start()
-    logger.info(f"fastapi started")
+    logger.info("fastapi started")
     yield
     scheduler.shutdown()
 

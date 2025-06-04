@@ -82,7 +82,7 @@ def _get_representive_docs_(info: DataFrame) -> Dict[int, str]:
     """
 
     return (
-        info[(info["Representative_document"] == True) & (info["Topic"] != -1)]
+        info[(info["Representative_document"] is True) & (info["Topic"] != -1)]
         .sort_values("Probability", ascending=False)
         .drop_duplicates(subset="Topic", keep="first")
         .sort_values("Topic")
