@@ -1,5 +1,5 @@
-from src.graph.state import State
+from src.graph.state import ClassifyState
 
 
-def reporter_node(state: State):
+def reporter_node(state: ClassifyState):
     return {"message": "reporter_node"}

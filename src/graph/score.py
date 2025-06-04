@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from src.config import config
 from src.graph._utils import get_response_property, pretty_response
-from src.graph.state import State
+from src.graph.state import ClassifyState
 from src.llms.factory import LLMFactory
 from src.models import db
 from src.models.entry_summary import EntrySummary
@@ -16,7 +16,7 @@ from src.prompts.prompts import get_prompt
 logger = logging.getLogger(__name__)
 
 
-def score_node(state: State):
+def score_node(state: ClassifyState):
     logger.info("score node start")
     prev_category = state.get("category")
     if prev_category is None:
