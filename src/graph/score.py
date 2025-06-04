@@ -32,6 +32,7 @@ def score_node(state: State):
             .first()
         )
         if entry_score:
+            logger.info(f"entry {state['entry'].get('id')} already scored")
             return Command(goto="__end__")
 
     # 修改: 使用 HumanMessage 构造消息
@@ -57,10 +58,11 @@ def score_node(state: State):
             "entry_id": state["entry"].get("id"),
             "score": score,
         }
-        session.add(EntryScore(_score))
+        session.add(EntryScore(**_score))
         session.add(
-            EntrySummary(entry_id=state["entry"].get("id"), summary=summary)
+            EntrySummary(entry_id=state["entry"].get("id"), ai_summary=summary)
         )
+        session.commit()
     if score == "noise":
         return Command(goto="__end__")
     return {"result": response}

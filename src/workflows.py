@@ -1,12 +1,12 @@
-import asyncio
 import datetime
 import logging
-import time
+import asyncio
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from src.config import config
-from src.graph import run_classification_graph
+from src.graph.classify_graph import run_classification_graph
 from src.models import db
 from src.models.rss_entry import RssEntry
 from src.models.tags import EntryCategory
@@ -14,24 +14,6 @@ from src.rss.rss_reader import RssReader
 from src.sources import SourceConfig
 
 logger = logging.getLogger(__name__)
-
-
-async def consumer(task_queue: asyncio.Queue):
-    try:
-        while True:
-            entry = await task_queue.get()
-            if entry is None:
-                break
-            try:
-                logger.info(f"Processing entry: {entry.get('title', '')}")
-                await run_classification_graph(entry)
-            except Exception as e:
-                logger.error(f"Error processing entry: {e}")
-            finally:
-                task_queue.task_done()
-    except asyncio.CancelledError:
-        logger.info("Consumer task cancelled")
-        raise
 
 
 def _convert_rss_entry_to_dict(rss_entry: RssEntry) -> dict:
@@ -83,7 +65,7 @@ async def fetch_task(max_workers: int = 10):
             )
             # Convert SQLAlchemy objects to dictionary format
             db_entries = [_convert_rss_entry_to_dict(entry) for entry in _e]
-            entries.extend(db_entries)
+            entries.extend(db_entries)  
         if not entries or len(entries) == 0:
             logger.info(
                 f"No new entries for source {source.name} to process, check the entries in database which may need to be process"
@@ -92,3 +74,69 @@ async def fetch_task(max_workers: int = 10):
     except Exception as e:
         logger.error(f"Error fetching task: {e}")
         raise
+
+
+async def run_graph(first: bool = True, entry_nums: int = 10):
+    """
+    run the graph for the entry with concurrent execution
+    
+    Args:
+        first: if True, only process the first entry
+        entry_nums: number of entries to process concurrently when first=False (default: 5)
+    Returns:
+        dict: processing results summary
+    """
+    with Session(db) as session:
+        if first:
+            entry = session.query(RssEntry).first()
+            if entry:
+                entry_dict = _convert_rss_entry_to_dict(entry)
+                await run_classification_graph(entry_dict)
+                logger.info("Single entry processing completed")
+                return {"processed": 1, "errors": 0}
+            else:
+                logger.info("No entries found to process")
+                return {"processed": 0, "errors": 0}
+        else:
+            # Get limited number of entries
+            entries = session.query(RssEntry).limit(entry_nums).all()
+            if not entries:
+                logger.info("No entries found to process")
+                return {"processed": 0, "errors": 0}
+            
+            logger.info(f"Starting concurrent processing of {len(entries)} entries")
+            
+            async def process_single_entry(entry):
+                """Process a single entry and return result"""
+                try:
+                    entry_dict = _convert_rss_entry_to_dict(entry)
+                    await run_classification_graph(entry_dict)
+                    logger.info(f"Successfully processed entry {entry.id}")
+                    return {"entry_id": entry.id, "status": "success"}
+                except Exception as e:
+                    logger.error(f"Error processing entry {entry.id}: {e}")
+                    return {"entry_id": entry.id, "status": "error", "error": str(e)}
+            
+            # Create tasks for concurrent execution
+            tasks = [process_single_entry(entry) for entry in entries]
+            
+            # Execute all tasks concurrently
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Count successful and failed processes
+            processed = 0
+            errors = 0
+            
+            for result in results:
+                if isinstance(result, dict):
+                    if result.get("status") == "success":
+                        processed += 1
+                    else:
+                        errors += 1
+                else:
+                    # Handle exceptions from gather
+                    errors += 1
+                    logger.error(f"Unexpected error in concurrent processing: {result}")
+            
+            logger.info(f"Concurrent processing completed: {processed} successful, {errors} errors")
+            return {"processed": processed, "errors": errors}

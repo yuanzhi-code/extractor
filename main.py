@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import logging
 from pathlib import Path
 
@@ -6,6 +7,7 @@ import uvicorn
 
 from src.config import config
 from src.graph.reporter_graph import run_reporter_graph
+from src.workflows import run_graph
 from src.llms import LLMFactory
 from src.utils.logger import setup_logger
 
@@ -16,6 +18,11 @@ def arg_parser():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument(
         "--debug", action="store_true", help="Enable debug logging"
+    )
+    parser.add_argument(
+        "--graph",
+        action="store_true",
+        help="Enable test graph",
     )
     return parser
 
@@ -33,7 +40,7 @@ def setup_logging():
     """
     # 获取根日志记录器
     root_logger = setup_logger()
-    
+
     # 添加文件处理器
     file_handler = logging.FileHandler("app.log")
     file_formatter = logging.Formatter(
@@ -41,7 +48,7 @@ def setup_logging():
     )
     file_handler.setFormatter(file_formatter)
     root_logger.addHandler(file_handler)
-    
+
     # 设置日志级别
     root_logger.setLevel(logging.INFO)
 
@@ -61,4 +68,8 @@ def main():
 
 if __name__ == "__main__":
     setup_logging()
-    uvicorn.run("src.app:app", reload=False, log_level="info")
+    args = arg_parser().parse_args()
+    if args.graph:
+        asyncio.run(run_graph(False))
+    else:
+        uvicorn.run("src.app:app", reload=False, log_level="info")

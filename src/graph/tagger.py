@@ -48,7 +48,7 @@ def tagger_node(state: State) -> Command[Literal["score"]]:
     with Session(db) as session:
         try:
             _category = EntryCategory(
-                {
+                **{
                     "entry_id": state["entry"].get("id"),
                     "category": category,
                 }

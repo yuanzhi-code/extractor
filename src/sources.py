@@ -75,12 +75,14 @@ class Source:
             try:
                 # 首先尝试查找已存在的 feed
                 result = session.execute(
-                    text("""
+                    text(
+                        """
                     SELECT id, updated 
                     FROM rss_feed 
                     WHERE link = :link
-                    """),
-                    {"link": feed_info["link"]}
+                    """
+                    ),
+                    {"link": feed_info["link"]},
                 ).first()
 
                 if result:
@@ -90,18 +92,22 @@ class Source:
                 else:
                     # 如果不存在，插入新记录，updated 设置为 Unix 时间戳起始时间（naive UTC）
                     result = session.execute(
-                        text("""
+                        text(
+                            """
                         INSERT INTO rss_feed (title, description, link, language, updated)
                         VALUES (:title, :description, :link, :language, :updated)
                         RETURNING id
-                        """),
+                        """
+                        ),
                         {
                             "title": feed_info["title"],
                             "description": feed_info["description"],
                             "link": feed_info["link"],
                             "language": feed_info["language"],
-                            "updated": datetime(1970, 1, 1).replace(tzinfo=None)  # naive UTC
-                        }
+                            "updated": datetime(1970, 1, 1).replace(
+                                tzinfo=None
+                            ),  # naive UTC
+                        },
                     )
                     feed_id = result.scalar()
                     feed_info["id"] = feed_id
@@ -143,7 +149,9 @@ class Source:
             feed_updated = parse_feed_datetime(feed_updated)
 
         logger.info("a new feed is found, need to full sync")
-        today = datetime.now(timezone.utc).replace(tzinfo=None)  # 转换为 naive UTC
+        today = datetime.now(timezone.utc).replace(
+            tzinfo=None
+        )  # 转换为 naive UTC
         end_date = today - timedelta(weeks=fetch_week)
 
         entries = rss_reader.get_entries_by_date(
@@ -194,14 +202,14 @@ class Source:
         feed_info = rss_reader.get_feed_info()
         # TODO 判断 数据库里 是否存在
         feed_id, need_full_sync = self._get_or_insert_feed(feed_info)
-        
+
         with Session(db) as session:
             feed = session.query(RssFeed).get(feed_id)
             # TODO
             if feed.is_up_to_date(feed_info["updated"]):
                 logger.info(f"Feed {feed_info['title']} is up to date")
                 return []
-            
+
             rss_reader.update_feed_info(feed_info=feed_info)
             logger.info(f"Feed标题: {feed_info['title']}")
             logger.info(f"Feed描述: {feed_info['description']}")
@@ -209,7 +217,7 @@ class Source:
             logger.info(f"Feed语言: {feed_info['language']}")
             logger.info(f"最后更新: {feed_info['updated']}")
             logger.info("-" * 50)
-            
+
             if need_full_sync:
                 entries = await self._full_sync_feed(
                     rss_reader=rss_reader, feed_updated=feed_info["updated"]
@@ -245,7 +253,7 @@ class Source:
                         entry["published"]
                     )
                     session.add(RssEntry(**new_entry))
-            
+
             session.commit()
             return entries
 

@@ -26,10 +26,10 @@ def parse_feed_datetime(dt_str: str) -> datetime:
                 dt = datetime.strptime(dt_str, "%a, %d %b %Y %H:%M:%S %z")
             else:
                 # 尝试 ISO 8601 格式
-                dt = datetime.fromisoformat(dt_str.replace('Z', '+00:00'))
+                dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
         except ValueError:
             raise ValueError(f"Unsupported datetime format: {dt_str}")
-    
+
     # 将时间转换为 UTC 时间，然后移除时区信息
     if dt.tzinfo is not None:
         dt = dt.astimezone(timezone.utc)
