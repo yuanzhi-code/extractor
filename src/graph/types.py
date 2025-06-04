@@ -17,6 +17,12 @@ class TagResult:
 
 
 @dataclass
+class ScorerOutput:
+    tag: str
+    summary: str
+
+
+@dataclass
 class TaggerReviewResult:
     approved: bool
     reason: str

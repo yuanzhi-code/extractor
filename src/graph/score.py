@@ -5,8 +5,8 @@ from langgraph.types import Command
 from sqlalchemy.orm import Session
 
 from src.config import config
-from src.graph._utils import get_response_property, pretty_response
 from src.graph.state import ClassifyState
+from src.graph.types import ScorerOutput
 from src.llms.factory import LLMFactory
 from src.models import db
 from src.models.entry_summary import EntrySummary
@@ -18,21 +18,9 @@ logger = logging.getLogger(__name__)
 
 def score_node(state: ClassifyState):
     logger.info("score node start")
-    prev_category = state.get("category")
-    if prev_category is None:
-        raise ValueError("No category found")
-
-    if prev_category not in ["tech", "business", "experience"]:
-        raise ValueError("Invalid category")
-
-    with Session(db) as session:
-        entry_score = (
-            session.query(EntryScore)
-            .filter(EntryScore.entry_id == state["entry"].get("id"))
-            .first()
-        )
-        if entry_score:
-            return Command(goto="__end__")
+    tag_result = state.get("tag_result")
+    if tag_result is None:
+        raise ValueError("No tag result found")
 
     # 修改: 使用 HumanMessage 构造消息
     messages = get_prompt("scorer")
@@ -42,24 +30,23 @@ def score_node(state: ClassifyState):
         HumanMessage(
             content=f"""
         content which need to be scored:
-          {state['entry'].get('content')}
+          {state['entry'].content}
           """
         )
     )
-    response = llm.invoke(messages)
-    pretty_response(response)
-    logger.info(f"score node response: \n{response.pretty_repr()}")
-    score = get_response_property(response, "tag")
-    summary = get_response_property(response, "summary")
+    response = llm.with_structured_output(ScorerOutput).invoke(messages)
+    logger.info(f"score node response: \n{response}")
+    score = response.tag
+    summary = response.summary
 
     with Session(db) as session:
         _score = {
-            "entry_id": state["entry"].get("id"),
+            "entry_id": state["entry"].id,
             "score": score,
         }
         session.add(EntryScore(_score))
         session.add(
-            EntrySummary(entry_id=state["entry"].get("id"), summary=summary)
+            EntrySummary(entry_id=state["entry"].id, summary=summary)
         )
     if score == "noise":
         return Command(goto="__end__")
