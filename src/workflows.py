@@ -34,6 +34,24 @@ async def consumer(task_queue: asyncio.Queue):
         raise
 
 
+def _convert_rss_entry_to_dict(rss_entry: RssEntry) -> dict:
+    """
+    Convert SQLAlchemy RssEntry object to dictionary format
+    """
+    return {
+        "id": rss_entry.id,
+        "feed_id": rss_entry.feed_id,
+        "title": rss_entry.title,
+        "link": rss_entry.link,
+        "content": rss_entry.content,
+        "author": rss_entry.author,
+        "summary": rss_entry.summary,
+        "published_at": rss_entry.published_at,
+        "created_gmt": rss_entry.created_gmt,
+        "modified_gmt": rss_entry.modified_gmt,
+    }
+
+
 # if __name__ == "__main__":
 async def fetch_task(max_workers: int = 10):
     """
@@ -63,35 +81,14 @@ async def fetch_task(max_workers: int = 10):
                 .join(EntryCategory, RssEntry.id == EntryCategory.entry_id)
                 .all()
             )
-            entries.extend(_e)
+            # Convert SQLAlchemy objects to dictionary format
+            db_entries = [_convert_rss_entry_to_dict(entry) for entry in _e]
+            entries.extend(db_entries)
         if not entries or len(entries) == 0:
             logger.info(
                 f"No new entries for source {source.name} to process, check the entries in database which may need to be process"
             )
-            return
-
-        task_queue = asyncio.Queue()
-        for entry in entries:
-            await task_queue.put(entry)
-
-        logger.info(f"Starting {max_workers} workers")
-        workers = [
-            asyncio.create_task(consumer(task_queue))
-            for _ in range(max_workers)
-        ]
-        start_time = time.time()
-
-        try:
-            await task_queue.join()
-        finally:
-            # 取消所有worker
-            for worker in workers:
-                worker.cancel()
-            # 等待所有worker完成
-            await asyncio.gather(*workers, return_exceptions=True)
-
-        end_time = time.time()
-        logger.info(f"Total time: {end_time - start_time} seconds")
+        return entries
     except Exception as e:
-        logger.error(f"Error in fetch_task: {e}")
+        logger.error(f"Error fetching task: {e}")
         raise
