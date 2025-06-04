@@ -32,12 +32,12 @@ class LLMFactory:
 
     supported_llms = _factory_registry.keys()
 
-    def get_llm(self, llm_type: str, model: Optional[str]):
+    def get_llm(self, llm_type: str, model: Optional[str] = None):
         cfg = self._get_llm_cfg(llm_type)
         if not cfg:
             raise ValueError(f"Unsupported LLM type: {llm_type}")
         if model is not None:
-            cfg.update("model", model)
+            cfg["model"] = model
         logger.info(f"Using LLM: {llm_type}/{cfg.get('model')}")
         return ChatOpenAI(**cfg)
 
