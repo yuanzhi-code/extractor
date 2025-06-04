@@ -3,13 +3,14 @@ import json
 import logging
 import os
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlite3 import IntegrityError
 from typing import List, Optional
 
 import backoff
 import requests
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from src.crawl.crawl import scrape_website_to_markdown
 from src.models import db
@@ -59,50 +60,57 @@ class Source:
 
     def _get_or_insert_feed(self, feed_info: dict):
         """
-        get feed info from database, if not found, insert it from input dict.
+        使用原生 SQL 实现 feed 的获取或插入功能。
+        使用 SQLite 的 UPSERT 语法（INSERT OR REPLACE）来处理并发情况。
 
         Args:
-            feed_info: feed information dictionary from RSS
+            feed_info: feed 信息字典
 
         Returns:
             tuple:
-                - feed_info_model: RssFeed model
-                - need_full_sync: bool, indicates that the feed parser needs to sync all entries if True
+                - feed_id: int, feed 的 ID
+                - need_full_sync: bool, 是否需要全量同步
         """
         with Session(db) as session:
-            rss_feed = (
-                session.query(RssFeed).filter_by(link=feed_info["link"]).first()
-            )
-            if rss_feed is not None:
-                feed_info["id"] = rss_feed.id
-                return rss_feed.id, False
-            rss_feed = RssFeed(
-                title=feed_info["title"],
-                description=feed_info["description"],
-                link=feed_info["link"],
-                language=feed_info["language"],
-            )
-            rss_feed.datetime_from_str(feed_info["updated"])
             try:
-                session.add(rss_feed)
-                session.commit()
-                feed_info["id"] = rss_feed.id
-                return rss_feed.id, True
-            except IntegrityError:
-                session.rollback()
-                # 如果发生完整性错误，尝试再次获取
-                rss_feed = (
-                    session.query(RssFeed)
-                    .filter_by(link=feed_info["link"])
-                    .first()
-                )
-                if rss_feed is not None:
-                    feed_info["id"] = rss_feed.id
-                    return rss_feed.id, False
-                raise  # 如果还是找不到，则抛出异常
+                # 首先尝试查找已存在的 feed
+                result = session.execute(
+                    text("""
+                    SELECT id, updated 
+                    FROM rss_feed 
+                    WHERE link = :link
+                    """),
+                    {"link": feed_info["link"]}
+                ).first()
+
+                if result:
+                    # 如果找到记录，检查是否需要更新
+                    feed_id, current_updated = result
+                    return feed_id, True
+                else:
+                    # 如果不存在，插入新记录，updated 设置为 Unix 时间戳起始时间（naive UTC）
+                    result = session.execute(
+                        text("""
+                        INSERT INTO rss_feed (title, description, link, language, updated)
+                        VALUES (:title, :description, :link, :language, :updated)
+                        RETURNING id
+                        """),
+                        {
+                            "title": feed_info["title"],
+                            "description": feed_info["description"],
+                            "link": feed_info["link"],
+                            "language": feed_info["language"],
+                            "updated": datetime(1970, 1, 1).replace(tzinfo=None)  # naive UTC
+                        }
+                    )
+                    feed_id = result.scalar()
+                    feed_info["id"] = feed_id
+                    session.commit()
+                    return feed_id, True
+
             except Exception as e:
                 session.rollback()
-                logger.error(f"Error inserting feed: {e}")
+                logger.error(f"处理 feed 时发生错误: {e}")
                 raise
 
     async def _crawl_entry(self, entries: List[dict]):
@@ -135,7 +143,7 @@ class Source:
             feed_updated = parse_feed_datetime(feed_updated)
 
         logger.info("a new feed is found, need to full sync")
-        today = datetime.now(datetime.UTC)  # 使用UTC时间
+        today = datetime.now(timezone.utc).replace(tzinfo=None)  # 转换为 naive UTC
         end_date = today - timedelta(weeks=fetch_week)
 
         entries = rss_reader.get_entries_by_date(
@@ -184,10 +192,12 @@ class Source:
         if not rss_reader.parse_feed(self.url):
             return []
         feed_info = rss_reader.get_feed_info()
+        # TODO 判断 数据库里 是否存在
         feed_id, need_full_sync = self._get_or_insert_feed(feed_info)
         
         with Session(db) as session:
             feed = session.query(RssFeed).get(feed_id)
+            # TODO
             if feed.is_up_to_date(feed_info["updated"]):
                 logger.info(f"Feed {feed_info['title']} is up to date")
                 return []

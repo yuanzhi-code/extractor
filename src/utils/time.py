@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def parse_feed_datetime(dt_str: str) -> datetime:
@@ -11,6 +11,10 @@ def parse_feed_datetime(dt_str: str) -> datetime:
     Returns:
         datetime: naive UTC datetime object
     """
+    if not dt_str:
+        # 如果时间字符串为空，返回当前时间
+        return datetime.now(timezone.utc).replace(tzinfo=None)
+
     try:
         # 首先尝试标准 RSS 格式
         dt = datetime.strptime(dt_str, "%a, %d %b %Y %H:%M:%S %z")
@@ -26,4 +30,7 @@ def parse_feed_datetime(dt_str: str) -> datetime:
         except ValueError:
             raise ValueError(f"Unsupported datetime format: {dt_str}")
     
+    # 将时间转换为 UTC 时间，然后移除时区信息
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc)
     return dt.replace(tzinfo=None)

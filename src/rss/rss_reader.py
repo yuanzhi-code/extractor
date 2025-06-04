@@ -52,7 +52,6 @@ class RssReader:
             "published": entry.get("published", ""),
             "summary": html.unescape(entry.get("summary", "")),
             "author": html.unescape(entry.get("author", "")),
-            "status": 0,
             "content": (
                 self.html2markdown.handle(
                     html.unescape(
@@ -139,7 +138,7 @@ class RssReader:
             "updated": self.feed.get("updated", ""),
         }
 
-        if feed_info["updated"] == "":
+        if feed_info["updated"] == "" and self.entries:
             # 使用 entry 的第一条的时间作为 updated time
             feed_info["updated"] = self.entries[0].get("published")
 
