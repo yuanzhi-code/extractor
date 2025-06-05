@@ -150,7 +150,7 @@ class WebContentExtractor:
         # 全局并发控制
         self.global_max_concurrent = global_max_concurrent
         self.global_semaphore = None
-        
+
         # 自定义延迟规则
         self.custom_delay_rule = custom_delay_rule
 
@@ -217,12 +217,14 @@ class WebContentExtractor:
 
         # 获取当前URL的延迟配置（优先使用自定义规则）
         delay_config = self._get_delay_config_for_url(url)
-        
+
         current_time = time.time()
 
         # 1. 全局请求间隔控制
         time_since_last = current_time - self.last_request_time
-        min_interval = random.uniform(delay_config["min_delay"], delay_config["max_delay"])
+        min_interval = random.uniform(
+            delay_config["min_delay"], delay_config["max_delay"]
+        )
         if time_since_last < min_interval:
             wait_time = min_interval - time_since_last
             logger.debug(f"全局延迟：等待 {wait_time:.2f} 秒")
@@ -230,8 +232,8 @@ class WebContentExtractor:
 
         # 2. 同域名延迟控制（更严格）
         same_domain_delay = random.uniform(
-            delay_config["same_domain_min_delay"], 
-            delay_config["same_domain_max_delay"]
+            delay_config["same_domain_min_delay"],
+            delay_config["same_domain_max_delay"],
         )
         domain_wait_time = self.domain_tracker.should_wait_for_domain(
             url, same_domain_delay
@@ -257,7 +259,7 @@ class WebContentExtractor:
             "same_domain_min_delay": self.same_domain_min_delay,
             "same_domain_max_delay": self.same_domain_max_delay,
         }
-        
+
         # 如果有自定义规则，尝试获取自定义配置
         if self.custom_delay_rule:
             try:
@@ -266,15 +268,17 @@ class WebContentExtractor:
                     # 合并配置，自定义配置优先
                     result_config = default_config.copy()
                     result_config.update(custom_config)
-                    
+
                     # 记录使用了自定义配置
                     domain = self.domain_tracker.get_domain(url)
-                    logger.debug(f"使用自定义延迟配置: {domain} - {custom_config}")
-                    
+                    logger.debug(
+                        f"使用自定义延迟配置: {domain} - {custom_config}"
+                    )
+
                     return result_config
             except Exception as e:
                 logger.warning(f"自定义延迟规则执行失败，使用默认配置: {e}")
-        
+
         return default_config
 
     def _should_retry(self, exception: Exception) -> bool:
@@ -369,7 +373,9 @@ class WebContentExtractor:
             # 如果使用反检测，添加随机请求头
             if self.use_anti_detection:
                 # 注入随机headers到crawler中
-                crawl_config["headers"] = AntiDetectionConfig.get_random_headers()
+                crawl_config["headers"] = (
+                    AntiDetectionConfig.get_random_headers()
+                )
 
             # 将 URL 添加到爬取配置中
             crawl_config["url"] = url
@@ -636,7 +642,7 @@ async def scrape_website_to_markdown(
     custom_delay_rule: Optional[callable] = None,
 ) -> dict[str, Any]:
     """爬取单个网站并转换为Markdown
-    
+
     Args:
         url: 要爬取的URL
         use_readability: 是否使用readability算法提取正文
@@ -648,7 +654,7 @@ async def scrape_website_to_markdown(
         global_max_concurrent: 全局最大并发数
         custom_delay_rule: 自定义延迟规则函数，接收URL参数，返回延迟配置字典
                           例如: lambda url: {"min_delay": 2.0} if "example.com" in url else None
-    
+
     Returns:
         包含爬取结果的字典
     """
@@ -677,7 +683,7 @@ async def scrape_multiple_websites(
     custom_delay_rule: Optional[callable] = None,
 ) -> dict[str, Any]:
     """批量爬取多个网站
-    
+
     Args:
         urls: 要爬取的URL列表
         max_concurrent: 最大并发数（已废弃，由global_max_concurrent控制）
@@ -689,7 +695,7 @@ async def scrape_multiple_websites(
         global_max_concurrent: 全局最大并发数
         custom_delay_rule: 自定义延迟规则函数，接收URL参数，返回延迟配置字典
                           例如: lambda url: {"same_domain_min_delay": 15.0} if "slow-site.com" in url else None
-    
+
     Returns:
         包含所有URL爬取结果的字典
     """
@@ -708,24 +714,24 @@ async def scrape_multiple_websites(
 
 # 简化版使用接口
 async def quick_scrape(
-    url: str, 
-    stealth_mode: bool = True, 
-    custom_delay_rule: Optional[callable] = None
+    url: str,
+    stealth_mode: bool = True,
+    custom_delay_rule: Optional[callable] = None,
 ) -> str:
     """快速爬取，只返回清理后的markdown内容
-    
+
     Args:
         url: 要爬取的URL
         stealth_mode: 是否启用隐身模式（反检测）
         custom_delay_rule: 自定义延迟规则函数
-    
+
     Returns:
         清理后的markdown内容字符串
     """
     result = await scrape_website_to_markdown(
-        url, 
+        url,
         use_anti_detection=stealth_mode,
-        custom_delay_rule=custom_delay_rule
+        custom_delay_rule=custom_delay_rule,
     )
     if result["success"]:
         return result["content"]
@@ -838,13 +844,14 @@ async def main():
     print(f"快速爬取结果: {content_preview}")
 
     print("\n=== 自定义延迟规则高级示例 ===")
+
     # 更复杂的自定义延迟规则示例
     def advanced_delay_rule(url: str) -> Optional[dict]:
         """更复杂的自定义延迟规则示例"""
         from urllib.parse import urlparse
-        
+
         domain = urlparse(url).netloc
-        
+
         # 根据域名设置不同的延迟策略
         delay_map = {
             # 严格的网站
@@ -862,16 +869,16 @@ async def main():
                 "max_delay": 2.0,
             },
         }
-        
+
         # 精确匹配域名
         if domain in delay_map:
             return delay_map[domain]
-            
+
         # 模糊匹配（如子域名）
         for pattern, config in delay_map.items():
             if pattern in domain:
                 return config
-                
+
         # 默认配置：对所有其他网站使用较快的延迟
         return {
             "same_domain_min_delay": 1.0,
@@ -886,7 +893,7 @@ async def main():
         use_anti_detection=True,
         custom_delay_rule=advanced_delay_rule,
     )
-    
+
     if advanced_result["success"]:
         print(f"高级规则爬取成功: {advanced_result['title']}")
     else:

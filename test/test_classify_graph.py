@@ -124,7 +124,7 @@ class TestClassifyGraph:
         # 验证条件函数被调用时的行为 - 模拟内部条件检查
         # 当两者都存在时，应该快速结束
         graph1_def = graph1.get_graph()
-        assert "__start__" in [node for node in graph1_def.nodes]
+        assert "__start__" in list(graph1_def.nodes)
 
         # 测试场景2：只有标签存在 -> 应该路由到 score
         mock_session.reset_mock()
@@ -135,7 +135,7 @@ class TestClassifyGraph:
 
         # 验证 score 节点在图中可达
         graph2_def = graph2.get_graph()
-        assert "score" in [node for node in graph2_def.nodes]
+        assert "score" in list(graph2_def.nodes)
 
         # 测试场景3：都不存在 -> 应该路由到 tagger
         mock_session.reset_mock()
@@ -146,7 +146,7 @@ class TestClassifyGraph:
 
         # 验证 tagger 节点在图中可达
         graph3_def = graph3.get_graph()
-        assert "tagger" in [node for node in graph3_def.nodes]
+        assert "tagger" in list(graph3_def.nodes)
 
         # 验证所有图实例有相同的结构（条件逻辑一致）
         assert (
