@@ -126,7 +126,18 @@ class Source:
             List[dict]: entries with crawled content
         """
         # 提取所有URLs
-        urls = [entry["link"] for entry in entries]
+        urls :list[str]= []
+        for entry in entries:
+            # skip if content is not None
+            if "content" in entry and entry["content"] is not None:
+                continue
+            if "link" not in entry:
+                continue
+            urls.append(entry["link"])
+        
+        if len(urls) == 0:
+            return 
+
         def custom_delay_rule(url: str) -> Optional[dict]:
             if "mp.weixin.qq.com" in url:
                 return {"min_delay": 30, "max_delay": 80}
@@ -142,6 +153,7 @@ class Source:
             same_domain_min_delay=10.0,
             same_domain_max_delay=20.0,
             global_max_concurrent=2,
+            custom_delay_rule=custom_delay_rule
         )
 
         # 将结果分配给对应的 entry
@@ -152,7 +164,7 @@ class Source:
             else:
                 entry["content"] = None
 
-        return entries
+        return 
 
     async def _full_sync_feed(
         self,

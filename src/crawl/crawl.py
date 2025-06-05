@@ -369,8 +369,7 @@ class WebContentExtractor:
             # 如果使用反检测，添加随机请求头
             if self.use_anti_detection:
                 # 注入随机headers到crawler中
-                # 注意：crawl4ai可能不直接支持per-request headers，这里作为示例
-                pass
+                crawl_config["headers"] = AntiDetectionConfig.get_random_headers()
 
             # 将 URL 添加到爬取配置中
             crawl_config["url"] = url
