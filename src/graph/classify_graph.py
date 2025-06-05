@@ -54,8 +54,8 @@ def get_classification_graph() -> CompiledStateGraph:
             END: END,
         },
     )
-    builder.add_edge("tagger", "score")
-    # builder.add_edge("tagger_review", "score")
+    builder.add_edge("tagger", "tagger_review")
+    builder.add_edge("tagger_review", "score")
     builder.add_edge("score", END)
     return builder.compile()
 
