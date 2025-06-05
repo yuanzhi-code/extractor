@@ -30,6 +30,7 @@ class LLMFactory:
             "model": config.SILICONFLOW_MODEL,
             "api_key": config.SILICONFLOW_API_KEY,
             "temperature": 0,
+            "timeout": 10,
         },
         "deepseek": {
             "base_url": "https://api.deepseek.com/v1",

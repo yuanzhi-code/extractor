@@ -75,40 +75,43 @@ async def run_crawl():
     await asyncio.gather(*tasks)
 
 
-async def run_classify_graph(first: bool = True, entry_nums: int = 10):
+async def run_classify_graph(
+    entry_nums: int = 10, 
+    ignore_limit: bool = False, 
+    max_concurrent: int = 3
+):
     """
     run the graph for the entry with concurrent execution
 
     Args:
-        first: if True, only process the first entry
-        entry_nums: number of entries to process concurrently when first=False (default: 5)
+        entry_nums: number of entries to process when ignore_limit=False (default: 10)
+        ignore_limit: if True, process all entries in database
+        max_concurrent: maximum number of entries to process concurrently (default: 3)
     Returns:
         dict: processing results summary
     """
     with Session(db) as session:
-        if first:
-            entry = session.query(RssEntry).first()
-            if entry:
-                await run_classification_graph(entry)
-                logger.info("Single entry processing completed")
-                return {"processed": 1, "errors": 0}
-            else:
-                logger.info("No entries found to process")
-                return {"processed": 0, "errors": 0}
+        if ignore_limit:
+            entries = session.query(RssEntry).all()
         else:
-            # Get limited number of entries
             entries = session.query(RssEntry).limit(entry_nums).all()
-            if not entries:
-                logger.info("No entries found to process")
-                return {"processed": 0, "errors": 0}
+        if not entries:
+            logger.info("No entries found to process")
+            return {"processed": 0, "errors": 0}
 
-            logger.info(
-                f"Starting concurrent processing of {len(entries)} entries"
-            )
+        logger.info(
+            f"Starting concurrent processing of {len(entries)} entries "
+            f"with max concurrent limit: {max_concurrent}"
+        )
 
-            async def process_single_entry(entry):
-                """Process a single entry and return result"""
+        # 创建信号量来限制并发数
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def process_single_entry(entry):
+            """Process a single entry and return result"""
+            async with semaphore:  # 使用信号量限制并发
                 try:
+                    logger.debug(f"Starting processing entry {entry.id}")
                     await run_classification_graph(entry)
                     logger.info(f"Successfully processed entry {entry.id}")
                     return {"entry_id": entry.id, "status": "success"}
@@ -120,30 +123,30 @@ async def run_classify_graph(first: bool = True, entry_nums: int = 10):
                         "error": str(e),
                     }
 
-            # Create tasks for concurrent execution
-            tasks = [process_single_entry(entry) for entry in entries]
+        # Create tasks for concurrent execution
+        tasks = [process_single_entry(entry) for entry in entries]
 
-            # Execute all tasks concurrently
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+        # Execute all tasks with concurrency control
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # Count successful and failed processes
-            processed = 0
-            errors = 0
+        # Count successful and failed processes
+        processed = 0
+        errors = 0
 
-            for result in results:
-                if isinstance(result, dict):
-                    if result.get("status") == "success":
-                        processed += 1
-                    else:
-                        errors += 1
+        for result in results:
+            if isinstance(result, dict):
+                if result.get("status") == "success":
+                    processed += 1
                 else:
-                    # Handle exceptions from gather
                     errors += 1
-                    logger.error(
-                        f"Unexpected error in concurrent processing: {result}"
-                    )
+            else:
+                # Handle exceptions from gather
+                errors += 1
+                logger.error(
+                    f"Unexpected error in concurrent processing: {result}"
+                )
 
-            logger.info(
-                f"Concurrent processing completed: {processed} successful, {errors} errors"
-            )
-            return {"processed": processed, "errors": errors}
+        logger.info(
+            f"Concurrent processing completed: {processed} successful, {errors} errors"
+        )
+        return {"processed": processed, "errors": errors}

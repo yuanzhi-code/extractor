@@ -33,6 +33,11 @@ def arg_parser():
         action="store_true",
         help="Enable crawl",
     )
+    parser.add_argument(
+        "--ignore-limit",
+        action="store_true",
+        help="Ignore the limit of entries to process",
+    )
     return parser
 
 
@@ -88,7 +93,7 @@ if __name__ == "__main__":
 
     args = arg_parser().parse_args()
     if args.graph:
-        asyncio.run(run_classify_graph(False, entry_nums=1))
+        asyncio.run(run_classify_graph(entry_nums=1, ignore_limit=args.ignore_limit))
     elif args.crawl:
         asyncio.run(run_crawl())
     else:
