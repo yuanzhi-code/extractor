@@ -6,7 +6,11 @@ from langgraph.types import Command, RunnableConfig
 from sqlalchemy.orm import Session
 
 from src.config import config as app_config
-from src.graph._utils import extract_category_from_review, parse_llm_json_response, upsert_record
+from src.graph._utils import (
+    extract_category_from_review,
+    parse_llm_json_response,
+    upsert_record,
+)
 from src.graph.state import ClassifyState
 from src.llms import factory
 from src.models import db
@@ -29,8 +33,7 @@ def tagger_node(state: ClassifyState, config: RunnableConfig) -> Command:
             logger.info(f"entry {state['entry'].id} has been tagged")
             logger.info(f"Existing category: {entry_category.category}")
             return Command(
-                update={"category": entry_category.category},
-                goto="score"
+                update={"category": entry_category.category}, goto="score"
             )
 
     messages = get_prompt("tagger")
@@ -48,7 +51,7 @@ def tagger_node(state: ClassifyState, config: RunnableConfig) -> Command:
     )
     response = llm.invoke(messages)
     logger.info(f"tagger node response: \n{response.content}")
-    
+
     # 解析响应
     tag_result_data = parse_llm_json_response(response.content)
 
@@ -86,17 +89,21 @@ def tagger_review_node(state: ClassifyState) -> Command[Literal["score"]]:
 
     with Session(db) as session:
         try:
-            logger.info(f"About to save category: {category} for entry {state['entry'].id}")
-            
+            logger.info(
+                f"About to save category: {category} for entry {state['entry'].id}"
+            )
+
             # 使用upsert处理EntryCategory
             category_record, category_created = upsert_record(
                 session=session,
                 model_class=EntryCategory,
                 filter_kwargs={"entry_id": state["entry"].id},
-                update_kwargs={"category": category}
+                update_kwargs={"category": category},
             )
-            logger.info(f"{'Created' if category_created else 'Updated'} category for entry {state['entry'].id}")
-            
+            logger.info(
+                f"{'Created' if category_created else 'Updated'} category for entry {state['entry'].id}"
+            )
+
             session.commit()
             logger.info("Successfully saved category")
         except Exception as e:

@@ -27,7 +27,7 @@ def score_node(state: ClassifyState):
     """
     logger.info("score node start")
     category = state.get("category")
-    
+
     # 如果state中没有category，从数据库查询
     if category is None:
         with Session(db) as session:
@@ -59,7 +59,7 @@ def score_node(state: ClassifyState):
     )
     response = llm.invoke(messages)
     logger.info(f"score node response: \n{response.content}")
-    
+
     # 使用工具函数处理response
     score, summary = extract_scorer_fields(response.content)
 
@@ -69,19 +69,23 @@ def score_node(state: ClassifyState):
             session=session,
             model_class=EntryScore,
             filter_kwargs={"entry_id": state["entry"].id},
-            update_kwargs={"score": score}
+            update_kwargs={"score": score},
         )
-        logger.info(f"{'Created' if score_created else 'Updated'} score for entry {state['entry'].id}")
-        
+        logger.info(
+            f"{'Created' if score_created else 'Updated'} score for entry {state['entry'].id}"
+        )
+
         # 使用upsert处理EntrySummary
         summary_record, summary_created = upsert_record(
             session=session,
             model_class=EntrySummary,
             filter_kwargs={"entry_id": state["entry"].id},
-            update_kwargs={"ai_summary": summary}
+            update_kwargs={"ai_summary": summary},
         )
-        logger.info(f"{'Created' if summary_created else 'Updated'} summary for entry {state['entry'].id}")
-        
+        logger.info(
+            f"{'Created' if summary_created else 'Updated'} summary for entry {state['entry'].id}"
+        )
+
         session.commit()
     if score == "noise":
         return Command(goto="__end__")

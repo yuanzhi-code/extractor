@@ -14,6 +14,7 @@ from src.workflows import run_classify_graph, run_crawl
 # 使用一个全局变量来确保日志只配置一次
 _logging_configured = False
 
+
 def arg_parser():
     """
     parse the command line arguments
@@ -49,7 +50,7 @@ def setup_logging():
     global _logging_configured
     if _logging_configured:
         return
-    
+
     # 获取根日志记录器
     root_logger = setup_logger()
 
@@ -63,7 +64,7 @@ def setup_logging():
 
     # 设置日志级别
     root_logger.setLevel(logging.INFO)
-    
+
     _logging_configured = True
 
 
@@ -84,7 +85,7 @@ if __name__ == "__main__":
     # 确保日志配置只执行一次
     setup_logging()
     logger = setup_logger(__name__)
-    
+
     args = arg_parser().parse_args()
     if args.graph:
         asyncio.run(run_classify_graph(False, entry_nums=1))

@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Optional, Type, Any, Dict
+from typing import Any, Optional
 
 from langchain_core.messages import BaseMessage
 from sqlalchemy.orm import Session
@@ -21,7 +21,9 @@ def get_response_property(response: BaseMessage, property_name: str):
     return content[property_name]
 
 
-def parse_llm_json_response(response_text: str, default: Optional[dict] = None) -> dict:
+def parse_llm_json_response(
+    response_text: str, default: Optional[dict] = None
+) -> dict:
     """
     解析LLM的JSON响应，处理markdown代码块
     Args:
@@ -32,15 +34,15 @@ def parse_llm_json_response(response_text: str, default: Optional[dict] = None) 
     """
     if default is None:
         default = {}
-        
+
     try:
         if isinstance(response_text, str):
             # 清理可能的markdown代码块标记
             cleaned_text = response_text.strip()
-            cleaned_text = cleaned_text.removeprefix('```json')
-            cleaned_text = cleaned_text.removesuffix('```')
+            cleaned_text = cleaned_text.removeprefix("```json")
+            cleaned_text = cleaned_text.removesuffix("```")
             cleaned_text = cleaned_text.strip()
-            
+
             return json.loads(cleaned_text)
         else:
             return response_text if isinstance(response_text, dict) else default
@@ -67,7 +69,9 @@ def extract_scorer_fields(response_text: str) -> tuple[str, str]:
     return score, summary
 
 
-def extract_category_from_review(response_data: dict, tag_result_data: dict) -> str:
+def extract_category_from_review(
+    response_data: dict, tag_result_data: dict
+) -> str:
     """
     从审查结果中提取category
     Args:
@@ -78,7 +82,9 @@ def extract_category_from_review(response_data: dict, tag_result_data: dict) -> 
     """
     try:
         # 检查是否有新的分类建议
-        if response_data.get("comment") and isinstance(response_data["comment"], dict):
+        if response_data.get("comment") and isinstance(
+            response_data["comment"], dict
+        ):
             return response_data["comment"].get("name", "other")
         elif response_data.get("approved", False):
             # 如果审核通过，使用原始tag_result
@@ -91,7 +97,13 @@ def extract_category_from_review(response_data: dict, tag_result_data: dict) -> 
         return "other"
 
 
-def upsert_record(session: Session, model_class: Type, filter_kwargs: Dict[str, Any], update_kwargs: Dict[str, Any], create_kwargs: Optional[Dict[str, Any]] = None) -> tuple[Any, bool]:
+def upsert_record(
+    session: Session,
+    model_class: type,
+    filter_kwargs: dict[str, Any],
+    update_kwargs: dict[str, Any],
+    create_kwargs: Optional[dict[str, Any]] = None,
+) -> tuple[Any, bool]:
     """
     通用的upsert操作：如果记录存在则更新，不存在则创建
     Args:
@@ -105,7 +117,7 @@ def upsert_record(session: Session, model_class: Type, filter_kwargs: Dict[str, 
     """
     # 查询现有记录
     existing = session.query(model_class).filter_by(**filter_kwargs).first()
-    
+
     if existing:
         # 更新现有记录
         for key, value in update_kwargs.items():
@@ -117,7 +129,7 @@ def upsert_record(session: Session, model_class: Type, filter_kwargs: Dict[str, 
             create_kwargs = {**filter_kwargs, **update_kwargs}
         else:
             create_kwargs = {**filter_kwargs, **update_kwargs, **create_kwargs}
-        
+
         new_record = model_class(**create_kwargs)
         session.add(new_record)
         return new_record, True

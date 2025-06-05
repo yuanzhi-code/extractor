@@ -17,6 +17,7 @@ class LLMFactory:
     Returns:
         ChatOpenAI: llm instance
     """
+
     _factory_registry = {
         "ollama": {
             "base_url": config.OLLAMA_URL,
