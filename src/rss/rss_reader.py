@@ -11,7 +11,6 @@ from src.crawl import WebContentExtractor
 
 
 class RssReader:
-    # TODO(woxqaq): add cache for feeds and entries
     def __init__(self, proxy: Optional[str] = None):
         """
         初始化RSS阅读器

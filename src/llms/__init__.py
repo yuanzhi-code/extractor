@@ -4,4 +4,6 @@ llms package
 
 from .factory import LLMFactory
 
-__all__ = ["LLMFactory"]
+factory = LLMFactory()
+
+__all__ = ["factory"]

@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import os
@@ -11,7 +10,7 @@ import requests
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from src.crawl.crawl import scrape_website_to_markdown
+from src.crawl.crawl import WebExtractorConfig, scrape_multiple_websites
 from src.models import db
 from src.models.rss_entry import RssEntry
 from src.models.rss_feed import RssFeed
@@ -126,11 +125,49 @@ class Source:
         Returns:
             List[dict]: entries with crawled content
         """
-        tasks = [scrape_website_to_markdown(entry["link"]) for entry in entries]
-        results = await asyncio.gather(*tasks)
-        for entry, result in zip(entries, results):
-            entry["content"] = result["content"]
-        return entries
+        # 提取所有URLs
+        urls: list[str] = []
+        for entry in entries:
+            # skip if content is not None
+            if "content" in entry:
+                content = entry["content"]
+                if content.strip() != "":
+                    continue
+            if "link" not in entry:
+                continue
+            urls.append(entry["link"])
+
+        if len(urls) == 0:
+            return
+
+        def custom_delay_rule(url: str) -> Optional[dict]:
+            if "mp.weixin.qq.com" in url:
+                return {"min_delay": 30, "max_delay": 80}
+            return None
+
+        # 使用配置类来管理爬取参数
+        crawl_config = WebExtractorConfig(
+            use_anti_detection=True,
+            min_delay=1.0,
+            max_delay=3.0,
+            same_domain_min_delay=10.0,
+            same_domain_max_delay=20.0,
+            global_max_concurrent=2,
+            custom_delay_rule=custom_delay_rule,
+        )
+
+        # 使用批量爬取方法，只创建一个 WebContentExtractor 实例
+        results = await scrape_multiple_websites(urls, config=crawl_config)
+
+        # 将结果分配给对应的 entry
+        for entry in entries:
+            url = entry["link"]
+            if url in results and results[url]["success"]:
+                entry["content"] = results[url]["content"]
+            else:
+                entry["content"] = None
+
+        return
 
     async def _full_sync_feed(
         self,
@@ -216,10 +253,12 @@ class Source:
             logger.info("-" * 50)
 
             if need_full_sync:
+                logger.info("full sync feed")
                 entries = await self._full_sync_feed(
                     rss_reader=rss_reader, feed_updated=feed_info["updated"]
                 )
             else:
+                logger.info("partial sync feed")
                 entries = await self._partial_sync_feed(
                     rss_reader=rss_reader,
                     last_fetched=feed.updated,

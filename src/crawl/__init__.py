@@ -4,16 +4,12 @@ crawl package
 
 from .crawl import (
     WebContentExtractor,
-    quick_scrape,
+    WebExtractorConfig,
     scrape_multiple_websites,
-    scrape_sync,
-    scrape_website_to_markdown,
 )
 
 __all__ = [
     "WebContentExtractor",
-    "quick_scrape",
+    "WebExtractorConfig",
     "scrape_multiple_websites",
-    "scrape_sync",
-    "scrape_website_to_markdown",
 ]

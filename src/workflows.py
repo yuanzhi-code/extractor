@@ -15,24 +15,6 @@ from src.sources import Source, SourceConfig
 logger = logging.getLogger(__name__)
 
 
-def _convert_rss_entry_to_dict(rss_entry: RssEntry) -> dict:
-    """
-    Convert SQLAlchemy RssEntry object to dictionary format
-    """
-    return {
-        "id": rss_entry.id,
-        "feed_id": rss_entry.feed_id,
-        "title": rss_entry.title,
-        "link": rss_entry.link,
-        "content": rss_entry.content,
-        "author": rss_entry.author,
-        "summary": rss_entry.summary,
-        "published_at": rss_entry.published_at,
-        "created_gmt": rss_entry.created_gmt,
-        "modified_gmt": rss_entry.modified_gmt,
-    }
-
-
 # if __name__ == "__main__":
 async def fetch_task(max_workers: int = 10):
     """
@@ -62,9 +44,9 @@ async def fetch_task(max_workers: int = 10):
                 .join(EntryCategory, RssEntry.id == EntryCategory.entry_id)
                 .all()
             )
-            # Convert SQLAlchemy objects to dictionary format
-            db_entries = [_convert_rss_entry_to_dict(entry) for entry in _e]
-            entries.extend(db_entries)
+            # Add RssEntry objects directly (if this function is supposed to return RssEntry objects)
+            # Or keep the existing logic if it should return dict entries from sources
+            entries.extend(_e)
         if not entries or len(entries) == 0:
             logger.info(
                 f"""No new entries for source {source.name} to process,
@@ -77,6 +59,9 @@ async def fetch_task(max_workers: int = 10):
 
 
 async def run_crawl():
+    """
+    entrypoint for crawl and parse source
+    """
     sources = SourceConfig(source_dir="./data")
     rss_reader = RssReader(config.NETWORK_PROXY)
 
@@ -90,7 +75,7 @@ async def run_crawl():
     await asyncio.gather(*tasks)
 
 
-async def run_graph(first: bool = True, entry_nums: int = 10):
+async def run_classify_graph(first: bool = True, entry_nums: int = 10):
     """
     run the graph for the entry with concurrent execution
 
@@ -104,8 +89,7 @@ async def run_graph(first: bool = True, entry_nums: int = 10):
         if first:
             entry = session.query(RssEntry).first()
             if entry:
-                entry_dict = _convert_rss_entry_to_dict(entry)
-                await run_classification_graph(entry_dict)
+                await run_classification_graph(entry)
                 logger.info("Single entry processing completed")
                 return {"processed": 1, "errors": 0}
             else:
@@ -125,8 +109,7 @@ async def run_graph(first: bool = True, entry_nums: int = 10):
             async def process_single_entry(entry):
                 """Process a single entry and return result"""
                 try:
-                    entry_dict = _convert_rss_entry_to_dict(entry)
-                    await run_classification_graph(entry_dict)
+                    await run_classification_graph(entry)
                     logger.info(f"Successfully processed entry {entry.id}")
                     return {"entry_id": entry.id, "status": "success"}
                 except Exception as e:

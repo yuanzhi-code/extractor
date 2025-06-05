@@ -1,9 +1,10 @@
 from typing_extensions import TypedDict
 
+from src.graph.types import TagResult
 from src.models.rss_entry import RssEntry
 
 
-class State(TypedDict):
+class ClassifyState(TypedDict):
     """
     State for the tagger node.
     """
@@ -11,6 +12,7 @@ class State(TypedDict):
     content: str
     entry: RssEntry
     category: str
+    tag_result: TagResult
 
 
 class DeduplicateState(TypedDict):

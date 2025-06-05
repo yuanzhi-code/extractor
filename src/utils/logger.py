@@ -41,4 +41,8 @@ def setup_logger(name: Optional[str] = None) -> logging.Logger:
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
+    # 如果不是根logger，设置propagate=False防止重复记录
+    if name is not None:
+        logger.propagate = False
+
     return logger

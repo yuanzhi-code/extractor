@@ -53,7 +53,7 @@ def get_db():
     # 创建数据库引擎
     db = create_engine(
         get_db_url(),
-        echo=True,
+        echo=False,  # 关闭SQL语句回显，避免重复日志
         pool_size=10,
         # 重要：关闭SQLite连接池的限制检查
         connect_args={"check_same_thread": False},
