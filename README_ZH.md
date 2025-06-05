@@ -38,7 +38,7 @@ cd extractor
 
 2. 初始化环境并安装项目依赖
 ```bash
-uv venv && uv sync
+uv venv && uv sync --group dev
 ```
 
 3. 初始化数据库

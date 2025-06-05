@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import logging
 from pathlib import Path
 
@@ -7,14 +8,29 @@ import uvicorn
 from src.config import config
 from src.graph.reporter_graph import run_reporter_graph
 from src.llms import LLMFactory
+from src.utils.logger import setup_logger
+from src.workflows import run_crawl, run_classify_graph
 
-logger = logging.Logger(__name__)
+logger = setup_logger(__name__)
 
 
 def arg_parser():
+    """
+    parse the command line arguments
+    """
     parser = argparse.ArgumentParser(description="")
     parser.add_argument(
         "--debug", action="store_true", help="Enable debug logging"
+    )
+    parser.add_argument(
+        "--graph",
+        action="store_true",
+        help="Enable test graph",
+    )
+    parser.add_argument(
+        "--crawl",
+        action="store_true",
+        help="Enable crawl",
     )
     return parser
 
@@ -25,15 +41,24 @@ def config_validate():
 
 
 def setup_logging():
-    # 配置根日志
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler("app.log"),  # 输出到文件
-            logging.StreamHandler(),  # 输出到控制台
-        ],
+    """
+    设置日志系统
+    - 使用彩色日志输出到控制台
+    - 同时保存到文件
+    """
+    # 获取根日志记录器
+    root_logger = setup_logger()
+
+    # 添加文件处理器
+    file_handler = logging.FileHandler("app.log")
+    file_formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
+    file_handler.setFormatter(file_formatter)
+    root_logger.addHandler(file_handler)
+
+    # 设置日志级别
+    root_logger.setLevel(logging.INFO)
 
 
 def main():
@@ -44,11 +69,17 @@ def main():
     setup_logging()
     contents = []
     for md_file in Path("testdata").glob("*.md"):
-        with open(md_file, "r", encoding="utf-8") as f:
+        with open(md_file, encoding="utf-8") as f:
             contents.append(f.read())
     run_reporter_graph(contents)
 
 
 if __name__ == "__main__":
     setup_logging()
-    uvicorn.run("src.app:app", reload=False, log_level="info")
+    args = arg_parser().parse_args()
+    if args.graph:
+        asyncio.run(run_classify_graph(False))
+    elif args.crawl:
+        asyncio.run(run_crawl())
+    else:
+        uvicorn.run("src.app:app", reload=False, log_level="info")

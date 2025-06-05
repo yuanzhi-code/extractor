@@ -8,6 +8,8 @@ __pycache__/
 
 # local sqlite
 *.db
+*.db-shm
+*.db-wal
 
 # program output
 output.*

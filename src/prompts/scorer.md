@@ -48,18 +48,25 @@
 ---
 
 ### 输出标准
+输出一个json对象，包含以下字段：
+- tag: 标签，可选值为actionable、systematic、noise
+- summary: 摘要
+
+示例：
 ```json
 {
    "tag" : "actionable", 
    "summary":  "...", 
 }
 ```
+或者
 ```json
 {
    "tag" : "systematic", 
    "summary":  "...", 
 }
 ```
+或者
 ```json
 {
    "tag" : "noise", 

@@ -53,7 +53,7 @@ class LLMFactory:
         if not cfg:
             raise ValueError(f"Unsupported LLM type: {llm_type}")
         if model is not None:
-            cfg.update("model", model)
+            cfg["model"] = model
         logger.info(f"Using LLM: {llm_type}/{cfg.get('model')}")
         llm = ChatOpenAI(**cfg)
         return llm

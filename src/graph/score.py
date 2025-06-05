@@ -1,6 +1,6 @@
 import logging
 
-from langchain_core.messages import HumanMessage  # 新增导入
+from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 from sqlalchemy.orm import Session
 
@@ -32,7 +32,7 @@ def score_node(state: ClassifyState):
     # 修改: 使用 HumanMessage 构造消息
     messages = get_prompt("scorer")
     model_provider = config.MODEL_PROVIDER
-    llm = LLMFactory().get_llm(model_provider)
+    llm = LLMFactory().get_llm(model_provider, model=None)
     messages.append(
         HumanMessage(
             content=f"""

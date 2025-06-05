@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from crawl4ai import AsyncWebCrawler
 
@@ -71,7 +71,7 @@ class WebContentExtractor:
 
     async def extract_main_content(
         self, url: str, use_readability: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """提取网页主要内容"""
         try:
             # 爬取配置
@@ -135,7 +135,7 @@ class WebContentExtractor:
             }
 
         except Exception as e:
-            logger.error(f"提取内容时出错 {url}: {str(e)}")
+            logger.exception(f"提取内容时出错 {url}:")
             return {
                 "success": False,
                 "error": str(e),
@@ -185,7 +185,7 @@ class WebContentExtractor:
 
     async def extract_multiple_urls(
         self, urls: list, max_concurrent: int = 3
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """批量提取多个URL的内容"""
         semaphore = asyncio.Semaphore(max_concurrent)
 
@@ -217,7 +217,7 @@ class WebContentExtractor:
 # 使用示例函数
 async def scrape_website_to_markdown(
     url: str, use_readability: bool = True
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """爬取单个网站并转换为Markdown"""
     async with WebContentExtractor() as extractor:
         result = await extractor.extract_main_content(url, use_readability)
@@ -226,7 +226,7 @@ async def scrape_website_to_markdown(
 
 async def scrape_multiple_websites(
     urls: list, max_concurrent: int = 3
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """批量爬取多个网站"""
     async with WebContentExtractor() as extractor:
         results = await extractor.extract_multiple_urls(urls, max_concurrent)
@@ -245,7 +245,7 @@ async def quick_scrape(url: str) -> str:
 
 
 # 同步版本（如果需要）
-def scrape_sync(url: str) -> Dict[str, Any]:
+def scrape_sync(url: str) -> dict[str, Any]:
     """同步版本的爬取函数"""
     return asyncio.run(scrape_website_to_markdown(url))
 

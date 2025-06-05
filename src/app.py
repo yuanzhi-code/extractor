@@ -20,13 +20,13 @@ async def lifespan(app: FastAPI):
         # sample_task,
         fetch_task,
         "interval",
-        # hours=2,
-        seconds=10,
+        hours=2,
+        # seconds=10,
         # minutes=1,
         id="tagger task",
     )
     scheduler.start()
-    logger.info(f"fastapi started")
+    logger.info("fastapi started")
     yield
     scheduler.shutdown()
 

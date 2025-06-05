@@ -78,5 +78,5 @@ async def run_classification_graph(entry: RssEntry):
                 else:
                     message.pretty_print()
         except Exception as e:
-            logger.error(f"Error: {e}")
+            logger.exception("Error:")
             break

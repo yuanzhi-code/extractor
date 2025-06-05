@@ -38,7 +38,7 @@ cd extractor
 
 2. init venv and install project dependencies
 ```bash
-uv venv && uv sync
+uv venv && uv sync --group dev
 ```
 
 3. Setup database
