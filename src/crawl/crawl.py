@@ -1,115 +1,3 @@
-"""
-Web Content Extraction Module
-
-高级网页内容抓取模块，提供智能反检测、延迟控制和并发管理功能。
-
-主要组件:
-========
-
-WebContentExtractor
-    核心提取器类，提供完整的网页内容抓取功能
-
-DomainTracker  
-    域名请求跟踪器，管理同域名请求的延迟控制
-
-便捷函数:
-========
-
-scrape_website_to_markdown(url, **kwargs) -> dict
-    爬取单个网站并转换为Markdown格式
-
-scrape_multiple_websites(urls, **kwargs) -> dict  
-    批量爬取多个网站
-
-quick_scrape(url, **kwargs) -> str
-    快速爬取，只返回内容字符串
-
-scrape_sync(url, **kwargs) -> dict
-    同步版本的爬取函数
-
-核心特性:
-========
-
-🤖 智能反检测
-- 随机User-Agent轮换
-- 浏览器参数优化
-- 请求头随机化
-
-⏱️ 多层延迟控制  
-- 全局请求延迟
-- 同域名延迟
-- 自定义延迟规则
-
-🔄 智能重试机制
-- 指数退避重试
-- 智能错误判断
-- 可配置重试策略
-
-🎯 并发控制
-- 全局信号量限制
-- 域名级别管控
-- 防止服务器过载
-
-📝 内容优化
-- 正文智能提取
-- Markdown格式转换
-- 无用元素清理
-
-快速开始:
-========
-
-基础用法：
-    import asyncio
-    from src.crawl.crawl import scrape_website_to_markdown
-    
-    async def main():
-        result = await scrape_website_to_markdown("https://example.com")
-        if result["success"]:
-            print(f"标题: {result['title']}")
-            print(f"内容: {result['content']}")
-    
-    asyncio.run(main())
-
-批量爬取：
-    async def batch_crawl():
-        urls = ["https://site1.com", "https://site2.com"]
-        results = await scrape_multiple_websites(
-            urls,
-            use_anti_detection=True,
-            same_domain_min_delay=10.0
-        )
-        for url, result in results.items():
-            print(f"{url}: {result['success']}")
-
-自定义延迟规则：
-    def custom_delay(url: str) -> Optional[dict]:
-        if "slow-site.com" in url:
-            return {"same_domain_min_delay": 30.0}
-        return None
-    
-    result = await scrape_website_to_markdown(
-        "https://slow-site.com/page",
-        custom_delay_rule=custom_delay
-    )
-
-高级配置：
-    async with WebContentExtractor(
-        use_anti_detection=True,
-        same_domain_min_delay=15.0,
-        global_max_concurrent=1,
-        custom_delay_rule=my_custom_rule
-    ) as extractor:
-        result = await extractor.extract_main_content(url)
-
-注意事项:
-========
-- 建议在生产环境中启用反检测功能
-- 同域名延迟应根据目标网站的反爬策略调整
-- 并发数不宜过高，避免触发限制
-- 自定义延迟规则应考虑网站的具体情况
-
-"""
-
 import asyncio
 import logging
 import random
@@ -124,48 +12,67 @@ from crawl4ai import AsyncWebCrawler
 
 from src.crawl.anti_detect import AntiDetectionConfig
 
+"""
+Web Content Extractor with Custom Delay Rules
+
+自定义延迟规则功能说明:
+====================
+
+您可以通过 custom_delay_rule 参数为不同的网站设置个性化的延迟策略。
+
+使用方法:
+--------
+1. 创建一个函数，接收 URL 参数，返回延迟配置字典
+2. 将该函数传递给 custom_delay_rule 参数
+
+延迟配置字典支持的键:
+------------------
+- min_delay: 全局最小延迟（秒）
+- max_delay: 全局最大延迟（秒）  
+- same_domain_min_delay: 同域名最小延迟（秒）
+- same_domain_max_delay: 同域名最大延迟（秒）
+
+示例:
+-----
+# 简单示例
+def simple_delay_rule(url: str) -> Optional[dict]:
+    if "slow-site.com" in url:
+        return {"same_domain_min_delay": 30.0, "same_domain_max_delay": 60.0}
+    return None  # 使用默认配置
+
+# 复杂示例
+def advanced_delay_rule(url: str) -> Optional[dict]:
+    from urllib.parse import urlparse
+    domain = urlparse(url).netloc
+    
+    delay_configs = {
+        "api.strict-site.com": {
+            "min_delay": 5.0,
+            "max_delay": 10.0,
+            "same_domain_min_delay": 20.0,
+            "same_domain_max_delay": 40.0,
+        },
+        "normal-site.com": {
+            "same_domain_min_delay": 3.0,
+            "same_domain_max_delay": 6.0,
+        }
+    }
+    
+    return delay_configs.get(domain)
+
+# 使用示例
+result = await scrape_website_to_markdown(
+    "https://api.strict-site.com/data",
+    custom_delay_rule=advanced_delay_rule
+)
+"""
+
 # 设置日志
 logger = logging.getLogger(__name__)
 
 
 class DomainTracker:
-    """域名请求跟踪器
-    
-    用于跟踪和管理对不同域名的请求时间和频率，实现同域名延迟控制。
-    这是WebContentExtractor反爬策略的重要组成部分。
-    
-    功能特性:
-    --------
-    - 跟踪每个域名的上次请求时间
-    - 统计每个域名的总请求次数
-    - 计算同域名请求间的必要等待时间
-    - 提供请求统计和日志记录
-    
-    使用场景:
-    --------
-    - 避免对单一域名进行过于频繁的请求
-    - 实现基于域名的智能延迟策略
-    - 防止触发网站的反爬虫机制
-    - 提供域名级别的请求监控
-    
-    示例:
-    -----
-        tracker = DomainTracker()
-        
-        # 检查是否需要等待
-        wait_time = tracker.should_wait_for_domain("https://example.com/page1", 5.0)
-        if wait_time > 0:
-            await asyncio.sleep(wait_time)
-        
-        # 更新请求记录
-        tracker.update_domain_request("https://example.com/page1")
-    
-    注意事项:
-    --------
-    - 域名提取会保留端口号和协议
-    - 同一域名的不同页面被视为同一域名
-    - 统计信息会在对象生命周期内持续累积
-    """
+    """域名请求跟踪器"""
 
     def __init__(self):
         self.domain_last_request = defaultdict(float)
@@ -217,116 +124,7 @@ class DomainTracker:
 
 
 class WebContentExtractor:
-    """网页内容提取器，专注于正文内容并转换为Markdown
-    
-    这是一个高级的网页内容抓取工具，支持反检测、智能延迟、并发控制和自定义延迟规则。
-    使用 crawl4ai 作为底层爬取引擎，提供稳定可靠的网页内容提取服务。
-    
-    主要特性:
-    --------
-    - 🤖 智能反检测：随机User-Agent、请求头轮换、浏览器参数优化
-    - ⏱️ 多层延迟控制：全局延迟、同域名延迟、自定义延迟规则
-    - 🔄 智能重试机制：基于backoff的指数退避重试，智能错误判断
-    - 🎯 并发控制：全局信号量控制，避免过载目标服务器
-    - 📝 内容优化：自动提取正文、转换Markdown、清理无用元素
-    - 🔧 高度可配置：丰富的参数设置，满足不同场景需求
-    
-    参数说明:
-    --------
-    use_anti_detection : bool, default=True
-        是否启用反检测功能。启用后将使用随机User-Agent、优化浏览器参数等
-        
-    min_delay : float, default=1.0
-        全局请求间的最小延迟时间（秒）
-        
-    max_delay : float, default=3.0
-        全局请求间的最大延迟时间（秒）
-        
-    same_domain_min_delay : float, default=3.0
-        同域名请求间的最小延迟时间（秒），通常比全局延迟更长
-        
-    same_domain_max_delay : float, default=8.0
-        同域名请求间的最大延迟时间（秒）
-        
-    max_retries : int, default=3
-        最大重试次数，使用指数退避策略
-        
-    global_max_concurrent : int, default=3
-        全局最大并发请求数，启用反检测时会被限制为2
-        
-    custom_delay_rule : callable, optional
-        自定义延迟规则函数，接收URL参数，返回延迟配置字典
-        
-    自定义延迟规则:
-    -------------
-    custom_delay_rule 函数应接收一个URL字符串，返回包含延迟配置的字典或None。
-    支持的配置键包括：
-    
-    - min_delay: 覆盖全局最小延迟
-    - max_delay: 覆盖全局最大延迟  
-    - same_domain_min_delay: 覆盖同域名最小延迟
-    - same_domain_max_delay: 覆盖同域名最大延迟
-    
-    示例:
-        def my_delay_rule(url: str) -> Optional[dict]:
-            if "strict-site.com" in url:
-                return {
-                    "same_domain_min_delay": 30.0,
-                    "same_domain_max_delay": 60.0
-                }
-            elif "api.fast-site.com" in url:
-                return {
-                    "min_delay": 0.5,
-                    "max_delay": 1.0,
-                    "same_domain_min_delay": 1.0,
-                    "same_domain_max_delay": 2.0
-                }
-            return None  # 使用默认配置
-    
-    使用示例:
-    --------
-    基础用法：
-        async with WebContentExtractor() as extractor:
-            result = await extractor.extract_main_content("https://example.com")
-            if result["success"]:
-                print(f"标题: {result['title']}")
-                print(f"内容: {result['content']}")
-    
-    高级配置：
-        async with WebContentExtractor(
-            use_anti_detection=True,
-            same_domain_min_delay=10.0,
-            same_domain_max_delay=20.0,
-            global_max_concurrent=1,
-            custom_delay_rule=my_delay_rule
-        ) as extractor:
-            # 批量处理多个URL
-            results = await extractor.extract_multiple_urls([
-                "https://site1.com/page1",
-                "https://site1.com/page2",  # 会应用同域名延迟
-                "https://site2.com/page1"
-            ])
-    
-    便捷函数用法：
-        # 单个URL
-        result = await scrape_website_to_markdown(
-            "https://example.com",
-            custom_delay_rule=my_delay_rule
-        )
-        
-        # 批量URL
-        results = await scrape_multiple_websites(
-            ["https://site1.com", "https://site2.com"],
-            custom_delay_rule=my_delay_rule
-        )
-    
-    注意事项:
-    --------
-    - 启用反检测模式时，建议同域名延迟至少5秒以上
-    - 自定义延迟规则的异常会被捕获并回退到默认配置
-    - 并发控制是全局的，会影响所有正在进行的请求
-    - 重试机制会智能判断错误类型，避免无意义重试
-    """
+    """网页内容提取器，专注于正文内容并转换为Markdown"""
 
     def __init__(
         self,
