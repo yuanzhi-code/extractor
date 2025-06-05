@@ -10,7 +10,7 @@ import requests
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from src.crawl.crawl import scrape_multiple_websites
+from src.crawl.crawl import WebExtractorConfig, scrape_multiple_websites
 from src.models import db
 from src.models.rss_entry import RssEntry
 from src.models.rss_feed import RssFeed
@@ -145,10 +145,8 @@ class Source:
                 return {"min_delay": 30, "max_delay": 80}
             return None
 
-        # 使用批量爬取方法，只创建一个 WebContentExtractor 实例
-        results = await scrape_multiple_websites(
-            urls,
-            max_concurrent=2,
+        # 使用配置类来管理爬取参数
+        crawl_config = WebExtractorConfig(
             use_anti_detection=True,
             min_delay=1.0,
             max_delay=3.0,
@@ -157,6 +155,9 @@ class Source:
             global_max_concurrent=2,
             custom_delay_rule=custom_delay_rule,
         )
+
+        # 使用批量爬取方法，只创建一个 WebContentExtractor 实例
+        results = await scrape_multiple_websites(urls, config=crawl_config)
 
         # 将结果分配给对应的 entry
         for entry in entries:
