@@ -11,6 +11,7 @@ class ClassifyState(TypedDict):
 
     content: str
     entry: RssEntry
+    category: str
     tag_result: TagResult
 
 
