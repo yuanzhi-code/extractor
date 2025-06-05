@@ -18,36 +18,36 @@ logger = logging.getLogger(__name__)
 
 class WebExtractorConfig:
     """网页内容提取器配置类
-    
+
     封装了 WebContentExtractor 的所有配置参数，提供更清晰的参数管理方式。
-    
+
     参数说明:
     --------
     use_anti_detection : bool, default=True
         是否启用反检测功能。启用后将使用随机User-Agent、优化浏览器参数等
-        
+
     min_delay : float, default=1.0
         全局请求间的最小延迟时间（秒）
-        
+
     max_delay : float, default=3.0
         全局请求间的最大延迟时间（秒）
-        
+
     same_domain_min_delay : float, default=3.0
         同域名请求间的最小延迟时间（秒），通常比全局延迟更长
-        
+
     same_domain_max_delay : float, default=8.0
         同域名请求间的最大延迟时间（秒）
-        
+
     max_retries : int, default=3
         最大重试次数，使用指数退避策略
-        
+
     global_max_concurrent : int, default=3
         全局最大并发请求数，启用反检测时会被限制为2
-        
+
     custom_delay_rule : callable, optional
         自定义延迟规则函数，接收URL参数，返回延迟配置字典
     """
-    
+
     def __init__(
         self,
         use_anti_detection: bool = True,
@@ -67,27 +67,27 @@ class WebExtractorConfig:
         self.max_retries = max_retries
         self.global_max_concurrent = global_max_concurrent
         self.custom_delay_rule = custom_delay_rule
-        
+
         # 验证参数
         self._validate_config()
-    
+
     def _validate_config(self):
         """验证配置参数的有效性"""
         if self.min_delay < 0 or self.max_delay < 0:
             raise ValueError("延迟时间不能为负数")
-        
+
         if self.min_delay > self.max_delay:
             raise ValueError("最小延迟不能大于最大延迟")
-            
+
         if self.same_domain_min_delay > self.same_domain_max_delay:
             raise ValueError("同域名最小延迟不能大于最大延迟")
-            
+
         if self.max_retries < 0:
             raise ValueError("最大重试次数不能为负数")
-            
+
         if self.global_max_concurrent < 1:
             raise ValueError("最大并发数不能小于1")
-    
+
     @classmethod
     def create_strict_config(cls) -> "WebExtractorConfig":
         """创建严格的反爬配置（高延迟、低并发）"""
@@ -100,7 +100,7 @@ class WebExtractorConfig:
             global_max_concurrent=1,
             max_retries=5,
         )
-    
+
     @classmethod
     def create_fast_config(cls) -> "WebExtractorConfig":
         """创建快速配置（低延迟、高并发）"""
@@ -113,7 +113,7 @@ class WebExtractorConfig:
             global_max_concurrent=5,
             max_retries=2,
         )
-    
+
     @classmethod
     def create_balanced_config(cls) -> "WebExtractorConfig":
         """创建平衡配置（中等延迟和并发）"""
@@ -126,21 +126,31 @@ class WebExtractorConfig:
             global_max_concurrent=2,
             max_retries=3,
         )
-    
+
     def copy(self, **kwargs) -> "WebExtractorConfig":
         """复制配置并允许修改部分参数"""
         new_config = WebExtractorConfig(
-            use_anti_detection=kwargs.get('use_anti_detection', self.use_anti_detection),
-            min_delay=kwargs.get('min_delay', self.min_delay),
-            max_delay=kwargs.get('max_delay', self.max_delay),
-            same_domain_min_delay=kwargs.get('same_domain_min_delay', self.same_domain_min_delay),
-            same_domain_max_delay=kwargs.get('same_domain_max_delay', self.same_domain_max_delay),
-            max_retries=kwargs.get('max_retries', self.max_retries),
-            global_max_concurrent=kwargs.get('global_max_concurrent', self.global_max_concurrent),
-            custom_delay_rule=kwargs.get('custom_delay_rule', self.custom_delay_rule),
+            use_anti_detection=kwargs.get(
+                "use_anti_detection", self.use_anti_detection
+            ),
+            min_delay=kwargs.get("min_delay", self.min_delay),
+            max_delay=kwargs.get("max_delay", self.max_delay),
+            same_domain_min_delay=kwargs.get(
+                "same_domain_min_delay", self.same_domain_min_delay
+            ),
+            same_domain_max_delay=kwargs.get(
+                "same_domain_max_delay", self.same_domain_max_delay
+            ),
+            max_retries=kwargs.get("max_retries", self.max_retries),
+            global_max_concurrent=kwargs.get(
+                "global_max_concurrent", self.global_max_concurrent
+            ),
+            custom_delay_rule=kwargs.get(
+                "custom_delay_rule", self.custom_delay_rule
+            ),
         )
         return new_config
-    
+
     def __str__(self) -> str:
         """字符串表示"""
         return (
@@ -152,7 +162,7 @@ class WebExtractorConfig:
             f"retries={self.max_retries}, "
             f"custom_rule={'Yes' if self.custom_delay_rule else 'No'})"
         )
-    
+
     def __repr__(self) -> str:
         """调试表示"""
         return self.__str__()
@@ -160,22 +170,22 @@ class WebExtractorConfig:
 
 class DomainTracker:
     """域名请求跟踪器
-    
+
     跟踪每个域名的请求时间和频率，用于实现同域名延迟控制，
     避免对单一域名进行过于频繁的请求。
-    
+
     Attributes:
         domain_last_request (defaultdict): 域名到最后请求时间的映射
         domain_request_count (defaultdict): 域名到请求次数的映射
-    
+
     Example:
         tracker = DomainTracker()
-        
+
         # 检查是否需要等待
         wait_time = tracker.should_wait_for_domain(url, 5.0)
         if wait_time > 0:
             await asyncio.sleep(wait_time)
-        
+
         # 发起请求后更新记录
         tracker.update_domain_request(url)
     """
@@ -231,25 +241,25 @@ class DomainTracker:
 
 class WebContentExtractor:
     """网页内容提取器，专注于正文内容并转换为Markdown
-    
+
     支持反检测、智能延迟、并发控制和自定义延迟规则的高级网页内容抓取工具。
     使用 crawl4ai 作为底层爬取引擎。
-    
+
     主要特性:
         - 智能反检测：随机User-Agent、请求头轮换、浏览器参数优化
         - 多层延迟控制：全局延迟、同域名延迟、自定义延迟规则
         - 智能重试机制：基于backoff的指数退避重试
         - 并发控制：全局信号量控制，避免过载目标服务器
         - 内容优化：自动提取正文、转换Markdown、清理无用元素
-    
+
     Args:
         config (WebExtractorConfig, optional): 配置对象，如果为None则使用默认配置
-    
+
     Example:
         # 使用默认配置
         async with WebContentExtractor() as extractor:
             result = await extractor.extract_main_content(url)
-        
+
         # 使用自定义配置
         config = WebExtractorConfig.create_strict_config()
         async with WebContentExtractor(config=config) as extractor:
@@ -261,11 +271,11 @@ class WebContentExtractor:
         config: Optional[WebExtractorConfig] = None,
     ):
         self.crawler = None
-        
+
         # 如果没有提供配置，使用默认配置
         if config is None:
             config = WebExtractorConfig()
-        
+
         self.config = config
         self.last_request_time = 0.0
         self.domain_tracker = DomainTracker()
@@ -463,7 +473,7 @@ class WebContentExtractor:
 
     async def _crawl_with_backoff(self, url: str, **crawl_config) -> Any:
         """使用 backoff 装饰器的爬取方法"""
-        
+
         async def _internal_crawl():
             # 使用全局信号量控制并发
             async with self.global_semaphore:
@@ -504,7 +514,8 @@ class WebContentExtractor:
         return await backoff.on_exception(
             backoff.expo,
             Exception,  # 捕获所有异常
-            max_tries=self.config.max_retries + 1,  # backoff的max_tries包含初次尝试
+            max_tries=self.config.max_retries
+            + 1,  # backoff的max_tries包含初次尝试
             base=2,  # 指数底数
             factor=2,  # 延迟因子
             max_value=30,  # 最大延迟时间30秒
@@ -672,9 +683,7 @@ class WebContentExtractor:
             domain_groups[domain].append(url)
         return dict(domain_groups)
 
-    async def extract_multiple_urls(
-        self, urls: list
-    ) -> dict[str, Any]:
+    async def extract_multiple_urls(self, urls: list) -> dict[str, Any]:
         """批量提取多个URL的内容，优化同域名处理"""
         # 按域名分组
         domain_groups = self._group_urls_by_domain(urls)
@@ -720,30 +729,31 @@ class WebContentExtractor:
 
         return processed_results
 
+
 async def scrape_multiple_websites(
     urls: list,
     config: Optional[WebExtractorConfig] = None,
 ) -> dict[str, Any]:
     """批量爬取多个网站
-    
+
     Args:
         urls: 要爬取的URL列表
         config: WebExtractorConfig 配置对象，如果为None则使用默认配置
-    
+
     Returns:
         包含所有URL爬取结果的字典
-        
+
     Examples:
         # 使用默认配置
         results = await scrape_multiple_websites(urls)
-        
+
         # 使用自定义配置
         config = WebExtractorConfig.create_balanced_config()
         results = await scrape_multiple_websites(urls, config=config)
     """
     if config is None:
         config = WebExtractorConfig()
-    
+
     async with WebContentExtractor(config=config) as extractor:
         results = await extractor.extract_multiple_urls(urls)
         return results
