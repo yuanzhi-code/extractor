@@ -127,6 +127,10 @@ class Source:
         """
         # 提取所有URLs
         urls = [entry["link"] for entry in entries]
+        def custom_delay_rule(url: str) -> Optional[dict]:
+            if "mp.weixin.qq.com" in url:
+                return {"min_delay": 30, "max_delay": 80}
+            return None
 
         # 使用批量爬取方法，只创建一个 WebContentExtractor 实例
         results = await scrape_multiple_websites(
