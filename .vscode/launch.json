@@ -21,6 +21,14 @@
                 "HF_ENDPOINT": "https://hf-mirror.com",
                 "HTTPS_PROXY":"127.0.0.1:7890"
             }
+        },
+        {
+            "name": "debug craw script",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "args": ["--craw"]
         }
     ]
 }

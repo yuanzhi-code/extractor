@@ -234,10 +234,12 @@ class Source:
             logger.info("-" * 50)
 
             if need_full_sync:
+                logger.info("full sync feed")
                 entries = await self._full_sync_feed(
                     rss_reader=rss_reader, feed_updated=feed_info["updated"]
                 )
             else:
+                logger.info("partial sync feed")
                 entries = await self._partial_sync_feed(
                     rss_reader=rss_reader,
                     last_fetched=feed.updated,
