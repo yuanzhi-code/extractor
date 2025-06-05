@@ -2,9 +2,11 @@ import asyncio
 import datetime
 import logging
 
+from sqlalchemy.orm import Session
+
 from src.config import config
 from src.graph.classify_graph import run_classification_graph
-from src.models import get_session
+from src.models import db
 from src.models.rss_entry import RssEntry
 from src.models.tags import EntryCategory
 from src.rss.rss_reader import RssReader
@@ -50,7 +52,7 @@ async def fetch_task(max_workers: int = 10):
                 entries.extend(new_entries)
             except Exception as e:
                 logger.exception(f"Error parsing source {source.name}:")
-        with get_session() as session:
+        with Session(db) as session:
             today = datetime.datetime.today()
             _e = (
                 session.query(RssEntry)

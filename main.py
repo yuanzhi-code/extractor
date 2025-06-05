@@ -15,6 +15,9 @@ logger = setup_logger(__name__)
 
 
 def arg_parser():
+    """
+    parse the command line arguments
+    """
     parser = argparse.ArgumentParser(description="")
     parser.add_argument(
         "--debug", action="store_true", help="Enable debug logging"
