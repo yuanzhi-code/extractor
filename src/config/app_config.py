@@ -23,6 +23,15 @@ class AppConfig(BaseSettings):
     DEEPSEEK_MODEL: str = Field(
         description="DeepSeek Model", default="deepseek-chat"
     )
+    OPENAI_COMPATIBLE_URL: str = Field(
+        description="OpenAI Compatible URL", default="https://api.openai.com/v1"
+    )
+    OPENAI_COMPATIBLE_MODEL: str = Field(
+        description="OpenAI Compatible Model", default="gpt-4o-mini"
+    )
+    OPENAI_COMPATIBLE_API_KEY: str = Field(
+        description="OpenAI Compatible API Key", default=""
+    )
     SQLITE_URL: str = Field(
         description="SQLite URL", default="sqlite:///app.db"
     )

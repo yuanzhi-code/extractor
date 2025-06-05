@@ -38,6 +38,13 @@ class LLMFactory:
             "api_key": config.DEEPSEEK_API_KEY,
             "temperature": 0,
         },
+        "openai-compatible": {
+            "base_url": config.OPENAI_COMPATIBLE_URL,
+            "model": config.OPENAI_COMPATIBLE_MODEL,
+            "api_key": config.OPENAI_COMPATIBLE_API_KEY,
+            "temperature": 0,
+            "timeout": 10,
+        },
     }
 
     supported_llms = _factory_registry.keys()

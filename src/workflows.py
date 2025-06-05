@@ -76,9 +76,7 @@ async def run_crawl():
 
 
 async def run_classify_graph(
-    entry_nums: int = 10, 
-    ignore_limit: bool = False, 
-    max_concurrent: int = 3
+    entry_nums: int = 10, ignore_limit: bool = False, max_concurrent: int = 3
 ):
     """
     run the graph for the entry with concurrent execution
