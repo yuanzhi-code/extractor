@@ -140,21 +140,6 @@ pool_name:
     health_check_interval: 30            # 健康检查间隔 (10-300秒)
 ```
 
-## API接口
-
-### 配置管理
-
-- `GET /api/llm/example-config` - 获取示例配置路径
-- `POST /api/llm/validate` - 验证池配置
-- `GET /api/pools/config/examples` - 获取池配置示例路径
-- `POST /api/pools/config/validate` - 验证池配置
-
-### 状态监控
-
-- `GET /api/llm/status` - 获取LLM系统状态
-- `GET /api/pools/` - 获取所有池信息
-- `GET /api/pools/{pool_name}/health` - 获取池健康状态
-
 ## 配置优势
 
 ### 1. 模型复用

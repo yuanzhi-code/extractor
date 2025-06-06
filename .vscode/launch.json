@@ -29,6 +29,14 @@
             "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
             "args": ["--craw"]
+        },
+        {
+            "name": "debug graph script",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "args": ["--graph"]
         }
     ]
 }

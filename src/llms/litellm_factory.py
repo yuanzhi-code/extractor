@@ -60,9 +60,15 @@ class LiteLLMChatModel:
             else:
                 raise ValueError(f"不支持的输入格式: {type(input_messages)}")
 
+            # 构建LiteLLM格式的模型名称（使用openai/前缀表示OpenAI兼容的端点）
+            if self._llm_config.provider == "openai":
+                full_model_name = f"openai/{self._llm_config.model}"
+            else:
+                full_model_name = self._llm_config.model
+
             # 准备API调用参数
             params = {
-                "model": self._llm_config.model,
+                "model": full_model_name,
                 "messages": litellm_messages,
                 "temperature": self._llm_config.temperature,
                 "timeout": self._llm_config.timeout,

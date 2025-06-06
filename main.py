@@ -5,7 +5,6 @@ from pathlib import Path
 
 import uvicorn
 
-from src.graph.reporter_graph import run_reporter_graph
 from src.llms.unified_manager import unified_llm_manager
 from src.utils.logger import setup_logger
 from src.workflows import run_classify_graph, run_crawl
@@ -41,11 +40,6 @@ def arg_parser():
         "--limit", type=int, default=10, help="limit the number of crawl"
     )
     parser.add_argument(
-        "--classify",
-        action="store_true",
-        help="Enable classify",
-    )
-    parser.add_argument(
         "--port",
         type=int,
         default=8000,
@@ -74,11 +68,11 @@ def configure_logging(debug: bool = False):
 
     # 设置日志级别
     level = logging.DEBUG if debug else logging.INFO
-    setup_logger(level=level)
+    setup_logger()
 
     # 获取根日志记录器并设置级别
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(level)
 
     _logging_configured = True
 
@@ -86,14 +80,45 @@ def configure_logging(debug: bool = False):
 def initialize_llm():
     """初始化LLM系统"""
     logger = logging.getLogger(__name__)
-    logger.info("初始化统一LLM系统...")
+    logger.info("🚀 初始化统一LLM系统...")
 
     # 初始化统一LLM管理器
     unified_llm_manager.initialize()
 
-    # 获取配置信息
+    # 获取配置信息并美化输出
     config_info = unified_llm_manager.get_config_info()
-    logger.info(f"LLM系统配置: {config_info}")
+    _log_llm_config(logger, config_info)
+
+
+def _log_llm_config(logger, config_info):
+    """美化输出LLM配置信息"""
+    logger.info("✅ LLM系统初始化成功")
+    logger.info(f"📊 配置类型: {config_info.get('type', 'unknown')}")
+    logger.info(f"🏊 池数量: {config_info.get('pools_count', 0)}")
+
+    # 输出池信息
+    pools = config_info.get("pools", {})
+    for pool_name, pool_info in pools.items():
+        healthy = pool_info.get("healthy_models", 0)
+        total = pool_info.get("total_models", 0)
+        strategy = pool_info.get("load_balance_strategy", "unknown")
+        description = pool_info.get("description", "无描述")
+
+        logger.info(
+            f"  🔸 {pool_name}: {healthy}/{total} 健康模型 | {strategy} | {description}"
+        )
+
+    # 输出节点映射
+    node_mapping = config_info.get("node_mapping", {})
+    mappings = node_mapping.get("node_mapping", {})
+    if mappings:
+        logger.info("🔗 节点映射:")
+        for node, pool in mappings.items():
+            logger.info(f"  📍 {node} → {pool}")
+
+    default_pool = node_mapping.get("default_pool")
+    if default_pool:
+        logger.info(f"🎯 默认池: {default_pool}")
 
 
 def main():
@@ -111,19 +136,16 @@ def main():
         return
 
     if args.graph:
-        logger.info("Starting graph test...")
-        asyncio.run(run_reporter_graph())
+        logger.info("Starting classify...")
+        asyncio.run(run_classify_graph())
     elif args.crawl:
-        logger.info("Starting crawl...")
+        logger.info("🕷️ 开始爬虫任务...")
         run_crawl(
             enable_limit=not args.ignore_limit,
             limit=args.limit,
         )
-    elif args.classify:
-        logger.info("Starting classify...")
-        asyncio.run(run_classify_graph())
     else:
-        logger.info("Starting API server...")
+        logger.info("🌐 启动API服务器...")
         from src import app
 
         uvicorn.run(app, host=args.host, port=args.port)

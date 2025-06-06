@@ -5,7 +5,6 @@ from langchain_core.messages import HumanMessage
 from langgraph.types import Command, RunnableConfig
 from sqlalchemy.orm import Session
 
-from src.config import config as app_config
 from src.graph._utils import (
     extract_category_from_review,
     parse_llm_json_response,

@@ -114,7 +114,7 @@ class PoolConfigManager:
     def _build_model_registry(
         self, providers_config: dict
     ) -> dict[str, ModelConfig]:
-        """构建模型注册表，将模型ID映射到ModelConfig"""
+        """构建模型注册表，将 provider:model 映射到ModelConfig"""
         model_registry = {}
 
         for provider_name, provider_data in providers_config.items():
@@ -125,8 +125,14 @@ class PoolConfigManager:
 
             models = provider_data.get("models", [])
             for model_data in models:
-                model_id = model_data["id"]
                 model_name = model_data["model"]
+
+                # 直接使用 provider:model 作为唯一标识
+                model_key = f"{provider_name}:{model_name}"
+
+                # 检查是否有重复
+                if model_key in model_registry:
+                    logger.warning(f"模型重复定义: '{model_key}' 将被覆盖")
 
                 # 从模型级别或提供商级别获取配置
                 model_config = ModelConfig(
@@ -141,7 +147,8 @@ class PoolConfigManager:
                     extra_params=model_data.get("extra_params", {}),
                 )
 
-                model_registry[model_id] = model_config
+                model_registry[model_key] = model_config
+                logger.debug(f"注册模型: {model_key}")
 
         return model_registry
 
@@ -150,19 +157,21 @@ class PoolConfigManager:
     ) -> list[ModelConfig]:
         """解析池中的模型引用，返回ModelConfig列表"""
         models = []
-        model_ids = pool_data.get("models", [])
+        model_refs = pool_data.get("models", [])
 
         # 池级别的默认配置
         pool_temperature = pool_data.get("temperature")
         pool_timeout = pool_data.get("timeout")
 
-        for model_id in model_ids:
-            if model_id not in model_registry:
-                logger.error(f"模型ID '{model_id}' 在供应商配置中不存在")
+        for model_ref in model_refs:
+            # model_ref 应该是 "provider:model" 格式
+            if model_ref not in model_registry:
+                logger.error(f"模型 '{model_ref}' 在供应商配置中不存在")
+                logger.info(f"可用模型: {list(model_registry.keys())}")
                 continue
 
             # 复制基础模型配置
-            base_config = model_registry[model_id]
+            base_config = model_registry[model_ref]
             model_config = ModelConfig(
                 model=base_config.model,
                 api_key=base_config.api_key,
@@ -224,12 +233,13 @@ class PoolConfigManager:
             errors.append("'pools' 必须是非空字典")
             return errors
 
-        # 建立模型ID集合用于引用检查
-        model_ids = set()
-        for provider_data in providers.values():
+        # 建立模型引用集合用于引用检查
+        model_refs = set()
+        for provider_name, provider_data in providers.items():
             for model in provider_data.get("models", []):
-                if "id" in model:
-                    model_ids.add(model["id"])
+                if "model" in model:
+                    model_ref = f"{provider_name}:{model['model']}"
+                    model_refs.add(model_ref)
 
         # 检查默认池
         default_pool = config_data.get("default_pool")
@@ -239,7 +249,7 @@ class PoolConfigManager:
         # 验证每个池
         for pool_name, pool_config in pools.items():
             pool_errors = self._validate_pool_config(
-                pool_name, pool_config, model_ids
+                pool_name, pool_config, model_refs
             )
             errors.extend(pool_errors)
 
@@ -280,8 +290,8 @@ class PoolConfigManager:
                 errors.append(f"供应商 '{provider_name}' 必须包含至少一个模型")
                 continue
 
-            # 检查模型ID唯一性
-            model_ids = []
+            # 检查模型名称唯一性
+            model_names = []
             for i, model in enumerate(models):
                 if not isinstance(model, dict):
                     errors.append(
@@ -290,28 +300,25 @@ class PoolConfigManager:
                     continue
 
                 # 检查必需字段
-                if "id" not in model:
-                    errors.append(
-                        f"供应商 '{provider_name}' 的模型 {i} 缺少 'id' 字段"
-                    )
                 if "model" not in model:
                     errors.append(
                         f"供应商 '{provider_name}' 的模型 {i} 缺少 'model' 字段"
                     )
+                    continue
 
-                # 检查ID唯一性
-                model_id = model.get("id")
-                if model_id in model_ids:
+                # 检查模型名称唯一性
+                model_name = model.get("model")
+                if model_name in model_names:
                     errors.append(
-                        f"供应商 '{provider_name}' 中模型ID '{model_id}' 重复"
+                        f"供应商 '{provider_name}' 中模型 '{model_name}' 重复"
                     )
                 else:
-                    model_ids.append(model_id)
+                    model_names.append(model_name)
 
         return errors
 
     def _validate_pool_config(
-        self, pool_name: str, pool_config: dict, valid_model_ids: set
+        self, pool_name: str, pool_config: dict, valid_model_refs: set
     ) -> list[str]:
         """验证单个池配置"""
         errors = []
@@ -325,14 +332,14 @@ class PoolConfigManager:
         if not isinstance(models, list) or not models:
             errors.append(f"池 '{pool_name}' 必须包含至少一个模型引用")
         else:
-            for model_id in models:
-                if not isinstance(model_id, str):
+            for model_ref in models:
+                if not isinstance(model_ref, str):
                     errors.append(
                         f"池 '{pool_name}' 的模型引用必须是字符串类型"
                     )
-                elif model_id not in valid_model_ids:
+                elif model_ref not in valid_model_refs:
                     errors.append(
-                        f"池 '{pool_name}' 引用的模型ID '{model_id}' 不存在"
+                        f"池 '{pool_name}' 引用的模型 '{model_ref}' 不存在"
                     )
 
         # 检查负载均衡策略

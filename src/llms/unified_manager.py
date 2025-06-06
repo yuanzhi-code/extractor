@@ -1,9 +1,8 @@
 import logging
 from typing import Optional
 
-from .litellm_factory import LiteLLMChatModel
 from .pool_config_manager import pool_config_manager
-from .pool_manager import pool_manager
+from .pool_manager import LiteLLMRouterWrapper, pool_manager
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +33,7 @@ class UnifiedLLMManager:
     def get_llm(
         self,
         node_name: Optional[str] = None,
-    ) -> LiteLLMChatModel:
+    ) -> LiteLLMRouterWrapper:
         """
         获取LLM实例
 
@@ -56,44 +55,16 @@ class UnifiedLLMManager:
 
         try:
             model_instance = pool_manager.get_model_for_node(node_name)
-            logger.debug(
-                f"从池为节点 {node_name} 获取模型: {model_instance.llm_config.model}"
-            )
+            logger.debug(f"从池为节点 {node_name} 获取LiteLLM Router模型")
 
-            # 包装模型以支持错误报告
-            return self._wrap_model_with_monitoring(model_instance, node_name)
+            # LiteLLM Router 自动处理监控，无需额外包装
+            return model_instance
         except Exception as e:
             logger.exception(f"从池系统获取模型失败，节点: {node_name}")
             raise RuntimeError(
                 f"无法从池系统获取模型（节点: {node_name}）。"
                 f"请检查池配置和节点映射。错误详情: {e}"
             ) from e
-
-    def _wrap_model_with_monitoring(
-        self, model_instance: LiteLLMChatModel, node_name: Optional[str]
-    ) -> LiteLLMChatModel:
-        """包装模型以支持监控和错误报告"""
-        original_invoke = model_instance.invoke
-
-        def monitored_invoke(*args, **kwargs):
-            try:
-                result = original_invoke(*args, **kwargs)
-                # 报告成功
-                pool_manager.report_model_success(
-                    node_name, model_instance.llm_config
-                )
-                return result
-            except Exception as e:
-                # 报告错误
-                pool_manager.report_model_error(
-                    node_name, model_instance.llm_config, e
-                )
-                logger.exception(f"模型调用失败，节点: {node_name}")
-                raise
-
-        # 替换invoke方法
-        model_instance.invoke = monitored_invoke
-        return model_instance
 
     def is_using_pools(self) -> bool:
         """是否在使用池系统（总是返回True，因为只支持池系统）"""

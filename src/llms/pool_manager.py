@@ -1,10 +1,11 @@
 import logging
-import random
-import threading
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from .litellm_factory import LiteLLMChatModel, ModelConfig
+from langchain_core.messages import AIMessage, BaseMessage
+from litellm import Router
+
+from .litellm_factory import ModelConfig
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +23,56 @@ class PoolConfig:
     extra_params: dict[str, Any] = field(default_factory=dict)
 
 
+class LiteLLMRouterWrapper:
+    """LiteLLM Router 的包装器，提供 LangChain 兼容的接口"""
+
+    def __init__(self, router: Router, pool_name: str):
+        self.router = router
+        self.pool_name = pool_name
+
+    def invoke(self, messages: list[BaseMessage], **kwargs) -> AIMessage:
+        """调用模型，返回 AIMessage"""
+        # 转换 LangChain 消息格式为 LiteLLM 格式
+        litellm_messages = []
+        for msg in messages:
+            if hasattr(msg, "type") and hasattr(msg, "content"):
+                # 映射 LangChain 角色到 OpenAI 格式
+                role_mapping = {
+                    "human": "user",
+                    "user": "user",
+                    "ai": "assistant",
+                    "assistant": "assistant",
+                    "system": "system",
+                    "tool": "tool",
+                }
+
+                role = role_mapping.get(msg.type, "user")  # 默认为 user
+                litellm_messages.append({"role": role, "content": msg.content})
+            else:
+                # 兼容其他格式
+                litellm_messages.append({"role": "user", "content": str(msg)})
+
+        # 调用 LiteLLM Router
+        try:
+            # 使用池名作为模型名，Router 会自动选择最佳部署
+            response = self.router.completion(
+                model=self.pool_name,  # Router 使用这个来找到对应的部署
+                messages=litellm_messages,
+                **kwargs,
+            )
+
+            # 转换回 LangChain 格式
+            content = response.choices[0].message.content
+            return AIMessage(content=content)
+
+        except Exception as e:
+            logger.exception("LiteLLM Router调用失败")
+            raise
+
+
 @dataclass
 class ModelPool:
-    """模型池"""
+    """基于 LiteLLM Router 的模型池"""
 
     name: str
     description: str = ""
@@ -32,168 +80,119 @@ class ModelPool:
     load_balance_strategy: str = "round_robin"
     pool_config: PoolConfig = field(default_factory=PoolConfig)
 
-    # 运行时状态
-    _round_robin_counter: int = 0
-    _model_health: dict[str, bool] = field(default_factory=dict)
-    _model_error_count: dict[str, int] = field(default_factory=dict)
-    _circuit_breaker_until: dict[str, float] = field(default_factory=dict)
-    _lock: threading.Lock = field(default_factory=threading.Lock)
+    # LiteLLM Router 实例
+    _router: Optional[Router] = field(default=None, init=False)
 
     def __post_init__(self):
-        """初始化后处理"""
-        for model in self.models:
-            model_key = f"{model.provider}:{model.model}"
-            self._model_health[model_key] = True
-            self._model_error_count[model_key] = 0
-            self._circuit_breaker_until[model_key] = 0.0
+        """初始化 LiteLLM Router"""
+        self._setup_router()
 
-    def get_model(self) -> LiteLLMChatModel:
-        """从池中获取一个模型实例"""
+    def _setup_router(self):
+        """设置 LiteLLM Router"""
         if not self.models:
-            raise ValueError(f"模型池 {self.name} 中没有可用的模型")
+            logger.warning(f"模型池 {self.name} 没有配置模型")
+            return
 
-        # 过滤可用的模型
-        available_models = self._get_healthy_models()
-        if not available_models:
-            # 如果没有健康的模型，尝试重置所有模型状态
-            logger.warning(f"池 {self.name} 中没有健康的模型，重置状态")
-            self._reset_all_models()
-            available_models = self.models
-
-        # 根据策略选择模型
-        selected_model = self._select_model(available_models)
-        logger.debug(f"从池 {self.name} 选择模型: {selected_model.model}")
-
-        return LiteLLMChatModel(selected_model)
-
-    def _get_healthy_models(self) -> list[ModelConfig]:
-        """获取健康的模型列表"""
-        import time
-
-        current_time = time.time()
-        healthy_models = []
-
-        with self._lock:
-            for model in self.models:
-                model_key = f"{model.provider}:{model.model}"
-
-                # 检查熔断器状态
-                if current_time < self._circuit_breaker_until.get(model_key, 0):
-                    continue
-
-                # 检查健康状态
-                if self._model_health.get(model_key, True):
-                    healthy_models.append(model)
-
-        return healthy_models
-
-    def _select_model(self, available_models: list[ModelConfig]) -> ModelConfig:
-        """根据负载均衡策略选择模型"""
-        if len(available_models) == 1:
-            return available_models[0]
-
-        strategy = self.load_balance_strategy
-
-        if strategy == "round_robin":
-            with self._lock:
-                index = self._round_robin_counter % len(available_models)
-                self._round_robin_counter += 1
-                return available_models[index]
-
-        elif strategy == "random":
-            return random.choice(available_models)
-
-        elif strategy == "weighted_random":
-            weights = [model.weight for model in available_models]
-            return random.choices(available_models, weights=weights)[0]
-
-        elif strategy == "least_used":
-            # 选择错误次数最少的模型
-            with self._lock:
-                best_model = min(
-                    available_models,
-                    key=lambda m: self._model_error_count.get(
-                        f"{m.provider}:{m.model}", 0
+        # 转换为 LiteLLM Router 格式
+        model_list = []
+        for model in self.models:
+            # 构建模型配置
+            model_config = {
+                "model_name": self.name,  # 使用池名作为 model_name，让所有模型属于同一组
+                "litellm_params": {
+                    "model": (
+                        f"{model.provider}/{model.model}"
+                        if model.provider != "openai"
+                        else f"openai/{model.model}"
                     ),
-                )
-                return best_model
+                    "api_key": model.api_key,
+                    "api_base": model.api_base,
+                    "temperature": model.temperature,
+                    "timeout": model.timeout,
+                },
+                "tpm": 1000000,  # Tokens per minute
+                "rpm": 10000,  # Requests per minute
+            }
 
-        else:
-            logger.warning(f"未知的负载均衡策略: {strategy}, 使用random")
-            return random.choice(available_models)
+            # 添加权重（如果支持）
+            if hasattr(model, "weight") and model.weight > 0:
+                model_config["litellm_params"]["weight"] = model.weight
 
-    def report_error(self, model: ModelConfig, error: Exception):
-        """报告模型错误"""
-        model_key = f"{model.provider}:{model.model}"
+            model_list.append(model_config)
 
-        with self._lock:
-            self._model_error_count[model_key] = (
-                self._model_error_count.get(model_key, 0) + 1
+        # 创建 Router
+        router_settings = {
+            "routing_strategy": self._convert_strategy(
+                self.load_balance_strategy
+            ),
+            "model_list": model_list,
+            "redis_host": None,  # 暂时不使用 Redis
+            "redis_password": None,
+            "redis_port": None,
+            "timeout": self.pool_config.timeout,
+            "num_retries": self.pool_config.max_retries,
+            "cooldown_time": self.pool_config.circuit_breaker_timeout,
+            "default_max_parallel_requests": self.pool_config.concurrent_limit,
+        }
+
+        try:
+            self._router = Router(**router_settings)
+            logger.info(
+                f"为池 {self.name} 创建 LiteLLM Router，包含 {len(model_list)} 个模型"
             )
-            error_count = self._model_error_count[model_key]
+        except Exception as e:
+            logger.exception(f"创建 LiteLLM Router 失败: {e}")
+            raise
 
-            logger.warning(
-                f"模型 {model_key} 错误计数: {error_count}, 错误: {error}"
-            )
+    def _convert_strategy(self, strategy: str) -> str:
+        """转换负载均衡策略"""
+        strategy_mapping = {
+            "round_robin": "simple-shuffle",
+            "random": "simple-shuffle",
+            "weighted_random": "latency-based-routing",
+            "least_used": "usage-based-routing-v2",
+        }
 
-            # 检查是否需要触发熔断器
-            if error_count >= self.pool_config.circuit_breaker_threshold:
-                import time
+        return strategy_mapping.get(strategy, "simple-shuffle")
 
-                self._circuit_breaker_until[model_key] = (
-                    time.time() + self.pool_config.circuit_breaker_timeout
-                )
-                self._model_health[model_key] = False
-                logger.error(
-                    f"模型 {model_key} 熔断器触发，将在 {self.pool_config.circuit_breaker_timeout} 秒后恢复"
-                )
+    def get_model(self) -> LiteLLMRouterWrapper:
+        """获取模型实例"""
+        if not self._router:
+            raise ValueError(f"模型池 {self.name} 的 Router 未初始化")
 
-    def report_success(self, model: ModelConfig):
-        """报告模型成功"""
-        model_key = f"{model.provider}:{model.model}"
-
-        with self._lock:
-            # 重置错误计数和健康状态
-            self._model_error_count[model_key] = 0
-            self._model_health[model_key] = True
-            self._circuit_breaker_until[model_key] = 0.0
-
-    def _reset_all_models(self):
-        """重置所有模型状态"""
-        with self._lock:
-            for model in self.models:
-                model_key = f"{model.provider}:{model.model}"
-                self._model_health[model_key] = True
-                self._model_error_count[model_key] = 0
-                self._circuit_breaker_until[model_key] = 0.0
+        return LiteLLMRouterWrapper(self._router, self.name)
 
     def get_status(self) -> dict[str, Any]:
         """获取池状态"""
-        import time
+        if not self._router:
+            return {
+                "name": self.name,
+                "description": self.description,
+                "status": "not_initialized",
+                "total_models": len(self.models),
+            }
 
-        current_time = time.time()
-
-        with self._lock:
-            model_status = {}
-            for model in self.models:
-                model_key = f"{model.provider}:{model.model}"
-                model_status[model_key] = {
-                    "healthy": self._model_health.get(model_key, True),
-                    "error_count": self._model_error_count.get(model_key, 0),
-                    "circuit_breaker_active": current_time
-                    < self._circuit_breaker_until.get(model_key, 0),
-                    "circuit_breaker_until": self._circuit_breaker_until.get(
-                        model_key, 0
-                    ),
-                }
+        # 获取 Router 状态
+        try:
+            router_health = self._router.health_check()
+            healthy_models = sum(
+                1
+                for model_health in router_health.values()
+                if model_health.get("status") == "healthy"
+            )
+        except:
+            healthy_models = 0
 
         return {
             "name": self.name,
             "description": self.description,
+            "status": "active",
             "total_models": len(self.models),
-            "healthy_models": len(self._get_healthy_models()),
+            "healthy_models": healthy_models,
             "load_balance_strategy": self.load_balance_strategy,
-            "model_status": model_status,
+            "router_strategy": self._convert_strategy(
+                self.load_balance_strategy
+            ),
         }
 
 
@@ -249,7 +248,7 @@ class PoolManager:
 
     def get_model_for_node(
         self, node_name: Optional[str] = None
-    ) -> LiteLLMChatModel:
+    ) -> LiteLLMRouterWrapper:
         """为指定节点获取模型"""
         pool_name = self._get_pool_for_node(node_name)
         if not pool_name:
@@ -276,18 +275,22 @@ class PoolManager:
         model_config: ModelConfig,
         error: Exception,
     ):
-        """报告模型错误"""
-        pool_name = self._get_pool_for_node(node_name)
-        if pool_name and pool_name in self.pools:
-            self.pools[pool_name].report_error(model_config, error)
+        """报告模型错误 - LiteLLM Router 自动处理"""
+        logger.debug(
+            f"模型错误报告: {model_config.provider}:{model_config.model} - {error}"
+        )
+        # LiteLLM Router 自动处理错误和熔断
+        pass
 
     def report_model_success(
         self, node_name: Optional[str], model_config: ModelConfig
     ):
-        """报告模型成功"""
-        pool_name = self._get_pool_for_node(node_name)
-        if pool_name and pool_name in self.pools:
-            self.pools[pool_name].report_success(model_config)
+        """报告模型成功 - LiteLLM Router 自动处理"""
+        logger.debug(
+            f"模型成功报告: {model_config.provider}:{model_config.model}"
+        )
+        # LiteLLM Router 自动处理成功状态
+        pass
 
     def list_pools(self) -> dict[str, dict[str, Any]]:
         """列出所有池的状态"""

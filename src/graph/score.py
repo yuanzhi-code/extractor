@@ -4,7 +4,6 @@ from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 from sqlalchemy.orm import Session
 
-from src.config import config as app_config
 from src.graph._utils import extract_scorer_fields, upsert_record
 from src.graph.state import ClassifyState
 from src.llms.unified_manager import unified_llm_manager
