@@ -1,0 +1,94 @@
+providers:
+  siliconflow:
+    api_base: "https://api.siliconflow.cn/v1"
+    api_key: "your-siliconflow-api-key-here"
+    provider: "siliconflow"
+    models:
+      - id: "qwen3-7b"
+        model: "Qwen/Qwen3-7B-Instruct"
+        weight: 1
+      - id: "qwen3-14b"
+        model: "Qwen/Qwen3-14B-Instruct"
+        weight: 2
+      - id: "llama3-8b"
+        model: "llama-3.1-8b-instruct"
+        weight: 1
+
+  deepseek:
+    api_base: "https://api.deepseek.com/v1"
+    api_key: "your-deepseek-api-key-here"
+    provider: "deepseek"
+    models:
+      - id: "deepseek-chat"
+        model: "deepseek-chat"
+        weight: 1
+
+  ollama:
+    api_base: "http://localhost:11434"
+    api_key: "dummy"
+    provider: "ollama"
+    models:
+      - id: "local-llama"
+        model: "qwen3:4b"
+        weight: 1
+
+pools:
+  fast_pool:
+    description: "快速响应池，用于实时任务"
+    models: ["qwen3-7b", "llama3-8b"]
+    load_balance_strategy: "round_robin"
+    temperature: 0.0
+    timeout: 10
+    pool_config:
+      max_retries: 3
+      concurrent_limit: 20
+      circuit_breaker_threshold: 5
+      circuit_breaker_timeout: 60
+      health_check_interval: 30
+
+  quality_pool:
+    description: "高质量模型池，用于复杂任务"
+    models: ["qwen3-14b", "deepseek-chat"]
+    load_balance_strategy: "weighted_random"
+    temperature: 0.1
+    timeout: 30
+    pool_config:
+      max_retries: 3
+      concurrent_limit: 10
+      circuit_breaker_threshold: 3
+      circuit_breaker_timeout: 120
+      health_check_interval: 60
+
+  cost_effective_pool:
+    description: "成本优化池，用于大批量任务"
+    models: ["qwen3-7b", "llama3-8b"]
+    load_balance_strategy: "least_used"
+    temperature: 0.0
+    timeout: 15
+    pool_config:
+      max_retries: 2
+      concurrent_limit: 15
+      circuit_breaker_threshold: 10
+      circuit_breaker_timeout: 30
+      health_check_interval: 45
+
+  local_pool:
+    description: "本地模型池"
+    models: ["local-llama"]
+    load_balance_strategy: "round_robin"
+    temperature: 0.2
+    timeout: 60
+    pool_config:
+      max_retries: 1
+      concurrent_limit: 5
+      circuit_breaker_threshold: 2
+      circuit_breaker_timeout: 120
+      health_check_interval: 120
+
+default_pool: "fast_pool"
+
+nodes:
+  tagger: "fast_pool"
+  score: "quality_pool"
+  extract: "cost_effective_pool"
+  local_task: "local_pool" 

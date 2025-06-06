@@ -12,7 +12,7 @@ from src.graph._utils import (
     upsert_record,
 )
 from src.graph.state import ClassifyState
-from src.llms import factory
+from src.llms.unified_manager import unified_llm_manager
 from src.models import db
 from src.models.tags import EntryCategory
 from src.prompts.prompts import get_prompt
@@ -37,13 +37,12 @@ def tagger_node(state: ClassifyState, config: RunnableConfig) -> Command:
             )
 
     messages = get_prompt("tagger")
-    model_provider = app_config.MODEL_PROVIDER
-    llm = factory.get_llm(llm_type=model_provider)
+    # 使用统一LLM管理器，为tagger节点获取专用模型
+    llm = unified_llm_manager.get_llm(node_name="tagger")
     messages.append(
         HumanMessage(
             f"""
-            现在请对原始内容进行分类，并给出你的分类结果，以JSON格式返回：
-            {{"name": "分类名称", "classification_rationale": "分类理由"}}
+            现在请对原始内容进行分类，并给出你的分类结果
             
             原始内容:{state['entry'].content}
             """
@@ -64,14 +63,13 @@ def tagger_node(state: ClassifyState, config: RunnableConfig) -> Command:
 def tagger_review_node(state: ClassifyState) -> Command[Literal["score"]]:
     logger.info("tagger review node start")
     messages = get_prompt("tagger_review")
-    model_provider = app_config.MODEL_PROVIDER
-    llm = factory.get_llm(llm_type=model_provider)
+    # 使用统一LLM管理器，为tagger_review节点获取专用模型
+    llm = unified_llm_manager.get_llm(node_name="tagger_review")
     tag_result = state["tag_result"]
     messages.append(
         HumanMessage(
             f"""
-            现在请你对分类结果进行审查，并给出你的评审意见和修改结果，以JSON格式返回：
-            {{"approved": true/false, "reason": "审查理由", "comment": {{"name": "新分类名称", "classification_rationale": "新分类理由"}} }}
+            现在请你对分类结果进行审查，并给出你的评审意见和修改结果
             
             如果approved为true，则comment可以为null。如果approved为false，请在comment中提供新的分类建议。
             

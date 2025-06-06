@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from src.config import config as app_config
 from src.graph._utils import extract_scorer_fields, upsert_record
 from src.graph.state import ClassifyState
-from src.llms import factory
+from src.llms.unified_manager import unified_llm_manager
 from src.models import db
 from src.models.entry_summary import EntrySummary
 from src.models.score import EntryScore
@@ -44,15 +44,12 @@ def score_node(state: ClassifyState):
 
     # 使用 HumanMessage 构造消息
     messages = get_prompt("scorer")
-    model_provider = app_config.MODEL_PROVIDER
-    llm = factory.get_llm(llm_type=model_provider)
+    # 使用统一LLM管理器，为score节点获取专用模型
+    llm = unified_llm_manager.get_llm(node_name="score")
     messages.append(
         HumanMessage(
             content=f"""
-        请为以下内容进行评分和总结，以JSON格式返回：
-        {{"tag": "评分结果", "summary": "内容总结"}}
-        
-        content which need to be scored:
+        请为以下内容进行评分和总结:
           {state['entry'].content}
           """
         )

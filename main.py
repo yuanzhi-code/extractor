@@ -5,9 +5,8 @@ from pathlib import Path
 
 import uvicorn
 
-from src.config import config
 from src.graph.reporter_graph import run_reporter_graph
-from src.llms import LLMFactory
+from src.llms.unified_manager import unified_llm_manager
 from src.utils.logger import setup_logger
 from src.workflows import run_classify_graph, run_crawl
 
@@ -36,67 +35,99 @@ def arg_parser():
     parser.add_argument(
         "--ignore-limit",
         action="store_true",
-        help="Ignore the limit of entries to process",
+        help="ignore the limit of crawl",
     )
-    return parser
+    parser.add_argument(
+        "--limit", type=int, default=10, help="limit the number of crawl"
+    )
+    parser.add_argument(
+        "--classify",
+        action="store_true",
+        help="Enable classify",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to run the server on (default: 8000)",
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="0.0.0.0",
+        help="Host to run the server on (default: 0.0.0.0)",
+    )
+
+    return parser.parse_args()
 
 
-def config_validate():
-    if config.MODEL_PROVIDER not in LLMFactory.supported_llms:
-        raise ValueError(f"Invalid model provider: {config.MODEL_PROVIDER}")
-
-
-def setup_logging():
-    """
-    设置日志系统
-    - 使用彩色日志输出到控制台
-    - 同时保存到文件
-    """
+def configure_logging(debug: bool = False):
+    """配置日志系统"""
     global _logging_configured
+
     if _logging_configured:
         return
 
-    # 获取根日志记录器
-    root_logger = setup_logger()
-
-    # 添加文件处理器
-    file_handler = logging.FileHandler("app.log")
-    file_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    file_handler.setFormatter(file_formatter)
-    root_logger.addHandler(file_handler)
+    # 创建日志目录
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
 
     # 设置日志级别
+    level = logging.DEBUG if debug else logging.INFO
+    setup_logger(level=level)
+
+    # 获取根日志记录器并设置级别
+    root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
 
     _logging_configured = True
 
 
+def initialize_llm():
+    """初始化LLM系统"""
+    logger = logging.getLogger(__name__)
+    logger.info("初始化统一LLM系统...")
+
+    # 初始化统一LLM管理器
+    unified_llm_manager.initialize()
+
+    # 获取配置信息
+    config_info = unified_llm_manager.get_config_info()
+    logger.info(f"LLM系统配置: {config_info}")
+
+
 def main():
-    """
-    程序入口
-    """
-    config_validate()
-    setup_logging()
-    contents = []
-    for md_file in Path("testdata").glob("*.md"):
-        with open(md_file, encoding="utf-8") as f:
-            contents.append(f.read())
-    run_reporter_graph(contents)
+    args = arg_parser()
+
+    # 配置日志
+    configure_logging(args.debug)
+    logger = logging.getLogger(__name__)
+
+    # 初始化LLM系统
+    try:
+        initialize_llm()
+    except Exception as e:
+        logger.exception("LLM系统初始化失败")
+        return
+
+    if args.graph:
+        logger.info("Starting graph test...")
+        asyncio.run(run_reporter_graph())
+    elif args.crawl:
+        logger.info("Starting crawl...")
+        run_crawl(
+            enable_limit=not args.ignore_limit,
+            limit=args.limit,
+        )
+    elif args.classify:
+        logger.info("Starting classify...")
+        asyncio.run(run_classify_graph())
+    else:
+        logger.info("Starting API server...")
+        from src import app
+
+        uvicorn.run(app, host=args.host, port=args.port)
 
 
 if __name__ == "__main__":
-    # 确保日志配置只执行一次
-    setup_logging()
-    logger = setup_logger(__name__)
-
-    args = arg_parser().parse_args()
-    if args.graph:
-        asyncio.run(
-            run_classify_graph(entry_nums=1, ignore_limit=args.ignore_limit)
-        )
-    elif args.crawl:
-        asyncio.run(run_crawl())
-    else:
-        uvicorn.run("src.app:app", reload=False, log_level="info")
+    main()
