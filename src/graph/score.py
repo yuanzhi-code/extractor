@@ -60,6 +60,26 @@ def score_node(state: ClassifyState):
     # 使用工具函数处理response
     score, summary = extract_scorer_fields(response.content)
 
+        # 验证和清理结果
+    valid_tags = ["actionable", "systematic", "noise"]
+    if score not in valid_tags:
+        logger.warning(f"Invalid score tag: {score}, defaulting to 'noise'")
+        score = "noise"
+
+    if not summary or summary.strip() == "":
+        logger.warning("Empty summary, setting default")
+        summary = "无有效摘要"
+
+    # 确保summary是单一字符串，不是列表或其他格式
+    if isinstance(summary, list):
+        logger.warning("Summary is a list, taking first element")
+        summary = summary[0] if summary else "无有效摘要"
+    elif not isinstance(summary, str):
+        logger.warning(f"Summary is not a string: {type(summary)}, converting")
+        summary = str(summary)
+
+    logger.info(f"Processed score: {score}, summary length: {len(summary)}")
+
     with Session(db) as session:
         # 使用upsert处理EntryScore
         score_record, score_created = upsert_record(
