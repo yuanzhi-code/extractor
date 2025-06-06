@@ -1,0 +1,13 @@
+---
+description: 
+globs: *.py
+alwaysApply: false
+---
+when you want to add logger in exception, use `logger.exception` without `e` rather than `logger.error`. for example:
+
+```pyhton
+try:
+    ...
+except Exception:
+    logger.Exception("...")
+```

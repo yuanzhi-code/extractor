@@ -21,7 +21,7 @@ def get_classification_graph() -> CompiledStateGraph:
     """
     builder = StateGraph(ClassifyState)
 
-    def check_tag_and_score_exist(state: ClassifyState) -> bool:
+    def check_tag_and_score_exist(state: ClassifyState) -> str:
         with Session(db) as session:
             entry_category = (
                 session.query(EntryCategory)
@@ -34,11 +34,25 @@ def get_classification_graph() -> CompiledStateGraph:
                 .first()
             )
             if entry_category and entry_score:
-                return END
+                return "already_processed"
             elif entry_category:
-                return "to_score"
+                return "category_exist"
             else:
-                return "to_tagger"
+                return "start_to_tagger"
+
+    def check_approved(state: ClassifyState) -> str:
+        if state.get("tagger_approved"):
+            return "direct_to_score"
+        else:
+            return "back_to_tagger"
+
+    def check_tagger_result(state: ClassifyState) -> str:
+        # 检查tagger节点是否成功产生了tag_result
+        if state.get("tag_result"):
+            return "to_tagger_review"
+        else:
+            # 如果没有tag_result，说明tagger节点失败，直接结束
+            return "tagger_error"
 
     builder.add_node("tagger", tagger_node)
     builder.add_node("tagger_review", tagger_review_node)
@@ -49,13 +63,27 @@ def get_classification_graph() -> CompiledStateGraph:
         START,
         check_tag_and_score_exist,
         {
-            "to_score": "score",
-            "to_tagger": "tagger",
-            END: END,
+            "category_exist": "score",
+            "start_to_tagger": "tagger",
+            "already_processed": END,
         },
     )
-    builder.add_edge("tagger", "tagger_review")
-    builder.add_edge("tagger_review", "score")
+    builder.add_conditional_edges(
+        "tagger",
+        check_tagger_result,
+        {
+            "to_tagger_review": "tagger_review",
+            "tagger_error": END,
+        },
+    )
+    builder.add_conditional_edges(
+        "tagger_review",
+        check_approved,
+        {
+            "back_to_tagger": "tagger",
+            "direct_to_score": "score",
+        },
+    )
     builder.add_edge("score", END)
     return builder.compile()
 
@@ -68,7 +96,7 @@ async def run_classification_graph(entry: RssEntry):
     # except Exception as e:
     #     logger.error(f"Error: {e}")
 
-    init_state = {"entry": entry}
+    init_state = {"entry": entry, "tagger_retry_count": 0}
     async for s in graph.astream(input=init_state, stream_mode="values"):
         try:
             if isinstance(s, dict) and "message" in s:

@@ -4,10 +4,9 @@ from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 from sqlalchemy.orm import Session
 
-from src.config import config as app_config
 from src.graph._utils import extract_scorer_fields, upsert_record
 from src.graph.state import ClassifyState
-from src.llms import factory
+from src.llms.unified_manager import unified_llm_manager
 from src.models import db
 from src.models.entry_summary import EntrySummary
 from src.models.score import EntryScore
@@ -44,24 +43,42 @@ def score_node(state: ClassifyState):
 
     # 使用 HumanMessage 构造消息
     messages = get_prompt("scorer")
-    model_provider = app_config.MODEL_PROVIDER
-    llm = factory.get_llm(llm_type=model_provider)
+    # 使用统一LLM管理器，为score节点获取专用模型
+    llm = unified_llm_manager.get_llm(node_name="score")
     messages.append(
         HumanMessage(
             content=f"""
-        请为以下内容进行评分和总结，以JSON格式返回：
-        {{"tag": "评分结果", "summary": "内容总结"}}
-        
-        content which need to be scored:
+        请为以下内容进行评分和总结:
           {state['entry'].content}
           """
         )
     )
-    response = llm.invoke(messages)
+    # 使用较低的temperature确保输出更一致
+    response = llm.invoke(messages, temperature=0.1, max_tokens=1000)
     logger.info(f"score node response: \n{response.content}")
 
     # 使用工具函数处理response
     score, summary = extract_scorer_fields(response.content)
+
+    # 验证和清理结果
+    valid_tags = ["actionable", "systematic", "noise"]
+    if score not in valid_tags:
+        logger.warning(f"Invalid score tag: {score}, defaulting to 'noise'")
+        score = "noise"
+
+    if not summary or summary.strip() == "":
+        logger.warning("Empty summary, setting default")
+        summary = "无有效摘要"
+
+    # 确保summary是单一字符串，不是列表或其他格式
+    if isinstance(summary, list):
+        logger.warning("Summary is a list, taking first element")
+        summary = summary[0] if summary else "无有效摘要"
+    elif not isinstance(summary, str):
+        logger.warning(f"Summary is not a string: {type(summary)}, converting")
+        summary = str(summary)
+
+    logger.info(f"Processed score: {score}, summary length: {len(summary)}")
 
     with Session(db) as session:
         # 使用upsert处理EntryScore
