@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from src.graph.score import score_node
 from src.graph.state import ClassifyState
-from src.graph.tagger import tagger_node, tagger_review_node
+from src.graph.tagger import tagger_node
 from src.models import db
 from src.models.rss_entry import RssEntry
 from src.models.score import EntryScore
@@ -40,22 +40,7 @@ def get_classification_graph() -> CompiledStateGraph:
             else:
                 return "start_to_tagger"
 
-    def check_approved(state: ClassifyState) -> str:
-        if state.get("tagger_approved"):
-            return "direct_to_score"
-        else:
-            return "back_to_tagger"
-
-    def check_tagger_result(state: ClassifyState) -> str:
-        # 检查tagger节点是否成功产生了tag_result
-        if state.get("tag_result"):
-            return "to_tagger_review"
-        else:
-            # 如果没有tag_result，说明tagger节点失败，直接结束
-            return "tagger_error"
-
     builder.add_node("tagger", tagger_node)
-    builder.add_node("tagger_review", tagger_review_node)
     builder.add_node("score", score_node)
 
     # builder.add_edge(START, "tagger")
@@ -66,22 +51,6 @@ def get_classification_graph() -> CompiledStateGraph:
             "category_exist": "score",
             "start_to_tagger": "tagger",
             "already_processed": END,
-        },
-    )
-    builder.add_conditional_edges(
-        "tagger",
-        check_tagger_result,
-        {
-            "to_tagger_review": "tagger_review",
-            "tagger_error": END,
-        },
-    )
-    builder.add_conditional_edges(
-        "tagger_review",
-        check_approved,
-        {
-            "back_to_tagger": "tagger",
-            "direct_to_score": "score",
         },
     )
     builder.add_edge("score", END)

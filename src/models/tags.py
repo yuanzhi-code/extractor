@@ -4,6 +4,7 @@ from enum import IntEnum
 from sqlalchemy import (
     Index,
     Integer,
+    String,
     orm,
 )
 
@@ -36,6 +37,7 @@ class EntryCategory(Base):
     )
     entry_id: orm.Mapped[int] = orm.mapped_column(Integer(), nullable=False)
     category: orm.Mapped[int] = orm.mapped_column(Integer(), nullable=False)
+    reason: orm.Mapped[str] = orm.mapped_column(String(255), nullable=False)
     created_at: orm.Mapped[datetime] = orm.mapped_column(
         nullable=False, default=datetime.now
     )

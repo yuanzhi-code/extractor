@@ -21,8 +21,8 @@ router_logger = logging.getLogger("LiteLLM Router")
 router_logger.setLevel(logging.WARNING)
 
 if (
-    os.environ("LANGFUSE_SECRET_KEY") != ""
-    and os.environ("LANGFUSE_PUBLIC_KEY") != ""
+    os.environ.get("LANGFUSE_SECRET_KEY") != ""
+    and os.environ.get("LANGFUSE_PUBLIC_KEY") != ""
 ):
     litellm.success_callback = ["langfuse"]
     litellm.failure_callback = ["langfuse"]

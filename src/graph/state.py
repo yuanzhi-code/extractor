@@ -12,10 +12,7 @@ class ClassifyState(TypedDict):
     content: str
     entry: RssEntry
     category: str
-    tagger_approved: bool
-    tagger_refine_reason: str
     tag_result: TagResult
-    tagger_retry_count: int
 
 
 class DeduplicateState(TypedDict):

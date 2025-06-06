@@ -37,7 +37,7 @@ def arg_parser():
         help="ignore the limit of crawl",
     )
     parser.add_argument(
-        "--limit", type=int, default=10, help="limit the number of crawl"
+        "--entry-nums", type=int, default=10, help="limit the number of crawl"
     )
     parser.add_argument(
         "--port",
@@ -137,10 +137,12 @@ def main():
 
     if args.graph:
         logger.info("Starting classify...")
-        asyncio.run(run_classify_graph())
+        asyncio.run(
+            run_classify_graph(entry_nums=args.entry_nums, ignore_limit=args.ignore_limit)
+        )
     elif args.crawl:
         logger.info("🕷️ 开始爬虫任务...")
-        run_crawl()
+        asyncio.run(run_crawl())
     else:
         logger.info("🌐 启动API服务器...")
         from src import app
