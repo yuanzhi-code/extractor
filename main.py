@@ -140,10 +140,7 @@ def main():
         asyncio.run(run_classify_graph())
     elif args.crawl:
         logger.info("🕷️ 开始爬虫任务...")
-        run_crawl(
-            enable_limit=not args.ignore_limit,
-            limit=args.limit,
-        )
+        run_crawl()
     else:
         logger.info("🌐 启动API服务器...")
         from src import app
