@@ -20,6 +20,8 @@ class ModelConfig:
     timeout: int = 30
     weight: int = 1  # 负载均衡权重
     provider: Optional[str] = None
+    tpm: Optional[int] = None  # Tokens per minute 限制
+    rpm: Optional[int] = None  # Requests per minute 限制
     extra_params: dict[str, Any] = field(default_factory=dict)
 
 

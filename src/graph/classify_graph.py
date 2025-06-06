@@ -21,7 +21,7 @@ def get_classification_graph() -> CompiledStateGraph:
     """
     builder = StateGraph(ClassifyState)
 
-    def check_tag_and_score_exist(state: ClassifyState) -> bool:
+    def check_tag_and_score_exist(state: ClassifyState) -> str:
         with Session(db) as session:
             entry_category = (
                 session.query(EntryCategory)
@@ -40,6 +40,12 @@ def get_classification_graph() -> CompiledStateGraph:
             else:
                 return "to_tagger"
 
+    def check_approved(state: ClassifyState) -> str:
+        if state.get("tagger_approved"):
+            return "to_score"
+        else:
+            return "to_tagger"
+
     builder.add_node("tagger", tagger_node)
     builder.add_node("tagger_review", tagger_review_node)
     builder.add_node("score", score_node)
@@ -55,7 +61,14 @@ def get_classification_graph() -> CompiledStateGraph:
         },
     )
     builder.add_edge("tagger", "tagger_review")
-    builder.add_edge("tagger_review", "score")
+    builder.add_conditional_edges(
+        "tagger_review",
+        check_approved,
+        {
+            "to_tagger": "tagger",
+            "to_score": "score",
+        },
+    )
     builder.add_edge("score", END)
     return builder.compile()
 

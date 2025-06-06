@@ -53,11 +53,32 @@ def score_node(state: ClassifyState):
           """
         )
     )
-    response = llm.invoke(messages)
+    # 使用较低的temperature确保输出更一致
+    response = llm.invoke(messages, temperature=0.1, max_tokens=1000)
     logger.info(f"score node response: \n{response.content}")
 
     # 使用工具函数处理response
     score, summary = extract_scorer_fields(response.content)
+    
+    # 验证和清理结果
+    valid_tags = ["actionable", "systematic", "noise"]
+    if score not in valid_tags:
+        logger.warning(f"Invalid score tag: {score}, defaulting to 'noise'")
+        score = "noise"
+    
+    if not summary or summary.strip() == "":
+        logger.warning("Empty summary, setting default")
+        summary = "无有效摘要"
+    
+    # 确保summary是单一字符串，不是列表或其他格式
+    if isinstance(summary, list):
+        logger.warning("Summary is a list, taking first element")
+        summary = summary[0] if summary else "无有效摘要"
+    elif not isinstance(summary, str):
+        logger.warning(f"Summary is not a string: {type(summary)}, converting")
+        summary = str(summary)
+    
+    logger.info(f"Processed score: {score}, summary length: {len(summary)}")
 
     with Session(db) as session:
         # 使用upsert处理EntryScore

@@ -4,10 +4,20 @@ from typing import Any, Optional
 
 from langchain_core.messages import AIMessage, BaseMessage
 from litellm import Router
+import litellm
 
 from .litellm_factory import ModelConfig
 
 logger = logging.getLogger(__name__)
+
+# 配置 LiteLLM 日志级别，避免重复日志
+litellm.set_verbose = False
+litellm_logger = logging.getLogger("LiteLLM")
+litellm_logger.setLevel(logging.WARNING)  # 只显示警告和错误
+
+# 禁用 LiteLLM Router 的日志
+router_logger = logging.getLogger("LiteLLM Router")
+router_logger.setLevel(logging.WARNING)
 
 
 @dataclass
@@ -110,9 +120,13 @@ class ModelPool:
                     "temperature": model.temperature,
                     "timeout": model.timeout,
                 },
-                "tpm": 1000000,  # Tokens per minute
-                "rpm": 10000,  # Requests per minute
             }
+            
+            # 添加 tpm/rpm 限制（如果指定）
+            if model.tpm is not None:
+                model_config["tpm"] = model.tpm
+            if model.rpm is not None:
+                model_config["rpm"] = model.rpm
 
             # 添加权重（如果支持）
             if hasattr(model, "weight") and model.weight > 0:
@@ -136,12 +150,18 @@ class ModelPool:
         }
 
         try:
+            # 添加调试和日志控制
+            router_settings.update({
+                "set_verbose": False,  # 禁用详细日志
+                "debug_level": "ERROR",  # 只显示错误级别日志
+            })
+            
             self._router = Router(**router_settings)
             logger.info(
                 f"为池 {self.name} 创建 LiteLLM Router，包含 {len(model_list)} 个模型"
             )
         except Exception as e:
-            logger.exception(f"创建 LiteLLM Router 失败: {e}")
+            logger.exception("创建 LiteLLM Router 失败")
             raise
 
     def _convert_strategy(self, strategy: str) -> str:

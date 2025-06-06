@@ -12,6 +12,8 @@ class ClassifyState(TypedDict):
     content: str
     entry: RssEntry
     category: str
+    tagger_approved: bool
+    tagger_refine_reason: str
     tag_result: TagResult
 
 

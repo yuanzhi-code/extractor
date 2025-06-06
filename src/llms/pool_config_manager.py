@@ -144,6 +144,8 @@ class PoolConfigManager:
                     timeout=model_data.get("timeout", 30),
                     weight=model_data.get("weight", 1),
                     provider=model_data.get("provider", provider_type),
+                    tpm=model_data.get("tpm", 50000),
+                    rpm=model_data.get("rpm", 1000),
                     extra_params=model_data.get("extra_params", {}),
                 )
 
@@ -189,6 +191,8 @@ class PoolConfigManager:
                 ),
                 weight=base_config.weight,
                 provider=base_config.provider,
+                tpm=base_config.tpm,
+                rpm=base_config.rpm,
                 extra_params=base_config.extra_params,
             )
             models.append(model_config)

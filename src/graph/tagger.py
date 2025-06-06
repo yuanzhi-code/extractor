@@ -6,7 +6,6 @@ from langgraph.types import Command, RunnableConfig
 from sqlalchemy.orm import Session
 
 from src.graph._utils import (
-    extract_category_from_review,
     parse_llm_json_response,
     upsert_record,
 )
@@ -44,6 +43,7 @@ def tagger_node(state: ClassifyState, config: RunnableConfig) -> Command:
             现在请对原始内容进行分类，并给出你的分类结果
             
             原始内容:{state['entry'].content}
+            {f"审查者要求重新分类：{state.get('tagger_refine_reason')}" if state.get('tagger_refine_reason') else ''}
             """
         )
     )
@@ -82,7 +82,16 @@ def tagger_review_node(state: ClassifyState) -> Command[Literal["score"]]:
 
     # 解析响应并提取category
     response_data = parse_llm_json_response(response.content)
-    category = extract_category_from_review(response_data, tag_result)
+    approved = response_data["approved"]
+
+    if not approved:
+        return Command(
+            update={
+                "tagger_refine_reason": response_data["comment"],
+                "tagger_approved": False,
+            }
+        )
+    category = tag_result["name"]
 
     with Session(db) as session:
         try:
@@ -91,7 +100,7 @@ def tagger_review_node(state: ClassifyState) -> Command[Literal["score"]]:
             )
 
             # 使用upsert处理EntryCategory
-            category_record, category_created = upsert_record(
+            _, category_created = upsert_record(
                 session=session,
                 model_class=EntryCategory,
                 filter_kwargs={"entry_id": state["entry"].id},
