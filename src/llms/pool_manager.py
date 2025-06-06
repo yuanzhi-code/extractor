@@ -2,9 +2,9 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+import litellm
 from langchain_core.messages import AIMessage, BaseMessage
 from litellm import Router
-import litellm
 
 from .litellm_factory import ModelConfig
 
