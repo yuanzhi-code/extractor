@@ -60,7 +60,7 @@ class LiteLLMRouterWrapper:
                 }
 
                 role = role_mapping.get(msg.type, "user")  # 默认为 user
-                litellm_messages.append({"role": role, "content": msg.content})
+                litellm_messages.append({"role": role, "content": msg.content.strip()})
             else:
                 # 兼容其他格式
                 litellm_messages.append({"role": "user", "content": str(msg)})
