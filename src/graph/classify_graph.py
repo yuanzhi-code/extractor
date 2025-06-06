@@ -46,6 +46,14 @@ def get_classification_graph() -> CompiledStateGraph:
         else:
             return "back_to_tagger"
 
+    def check_tagger_result(state: ClassifyState) -> str:
+        # 检查tagger节点是否成功产生了tag_result
+        if state.get("tag_result"):
+            return "to_tagger_review"
+        else:
+            # 如果没有tag_result，说明tagger节点失败，直接结束
+            return END
+
     builder.add_node("tagger", tagger_node)
     builder.add_node("tagger_review", tagger_review_node)
     builder.add_node("score", score_node)
@@ -55,12 +63,19 @@ def get_classification_graph() -> CompiledStateGraph:
         START,
         check_tag_and_score_exist,
         {
-            "category_exist": END,
+            "category_exist": "score",
             "start_to_tagger": "tagger",
             END: END,
         },
     )
-    builder.add_edge("tagger", "tagger_review")
+    builder.add_conditional_edges(
+        "tagger",
+        check_tagger_result,
+        {
+            "to_tagger_review": "tagger_review",
+            END: END,
+        },
+    )
     builder.add_conditional_edges(
         "tagger_review",
         check_approved,
@@ -81,7 +96,7 @@ async def run_classification_graph(entry: RssEntry):
     # except Exception as e:
     #     logger.error(f"Error: {e}")
 
-    init_state = {"entry": entry}
+    init_state = {"entry": entry, "tagger_retry_count": 0}
     async for s in graph.astream(input=init_state, stream_mode="values"):
         try:
             if isinstance(s, dict) and "message" in s:

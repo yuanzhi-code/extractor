@@ -14,6 +14,7 @@ class Category(IntEnum):
     TECH = 1
     BUSINESS = 2
     EXPERIENCE = 3
+    AGGREGATION = 4
     OTHER = 4
 
     @staticmethod

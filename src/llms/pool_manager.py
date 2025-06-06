@@ -60,7 +60,9 @@ class LiteLLMRouterWrapper:
                 }
 
                 role = role_mapping.get(msg.type, "user")  # 默认为 user
-                litellm_messages.append({"role": role, "content": msg.content.strip()})
+                litellm_messages.append(
+                    {"role": role, "content": msg.content.strip()}
+                )
             else:
                 # 兼容其他格式
                 litellm_messages.append({"role": "user", "content": str(msg)})
@@ -139,9 +141,7 @@ class ModelPool:
 
         # 创建 Router
         router_settings = {
-            "routing_strategy": self._convert_strategy(
-                self.load_balance_strategy
-            ),
+            "routing_strategy": self.load_balance_strategy,
             "model_list": model_list,
             "redis_host": None,  # 暂时不使用 Redis
             "redis_password": None,
@@ -168,29 +168,6 @@ class ModelPool:
         except Exception as e:
             logger.exception("创建 LiteLLM Router 失败")
             raise
-
-    def _convert_strategy(self, strategy: str) -> str:
-        """
-        转换负载均衡策略为 LiteLLM Router 支持的策略。
-
-        支持的策略:
-        - `round_robin`: 轮询 (默认)
-        - `random`: 随机
-        - `weighted_random`: 加权随机 (使用 `simple-shuffle` 和 `weight` 参数)
-        - `weighted_round_robin`: 加权轮询
-        - `latency`: 最低延迟
-        - `least_used`: 最少使用
-        """
-        strategy_mapping = {
-            "round_robin": "round-robin",
-            "random": "simple-shuffle",
-            "weighted_random": "simple-shuffle",
-            "weighted_round_robin": "weighted-round-robin",
-            "latency": "latency-based-routing",
-            "least_used": "usage-based-routing-v2",
-        }
-        # 默认使用轮询
-        return strategy_mapping.get(strategy, "round-robin")
 
     def get_model(self) -> LiteLLMRouterWrapper:
         """获取模型实例"""
@@ -227,9 +204,6 @@ class ModelPool:
             "total_models": len(self.models),
             "healthy_models": healthy_models,
             "load_balance_strategy": self.load_balance_strategy,
-            "router_strategy": self._convert_strategy(
-                self.load_balance_strategy
-            ),
         }
 
 

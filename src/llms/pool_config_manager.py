@@ -349,10 +349,11 @@ class PoolConfigManager:
         # 检查负载均衡策略
         strategy = pool_config.get("load_balance_strategy", "round_robin")
         valid_strategies = [
-            "round_robin",
-            "random",
-            "weighted_random",
-            "least_used",
+            "usage-based-routing-v2",
+            "usage-based-routing",
+            "simple-shuffle",
+            "latency-based-routing",
+            "least-busy",
         ]
         if strategy not in valid_strategies:
             errors.append(

@@ -42,7 +42,7 @@ pools:
     models: 
       - "siliconflow:Qwen/Qwen3-7B-Instruct"     # SiliconFlow的Qwen
       - "huggingface:Qwen/Qwen3-7B-Instruct"     # HuggingFace的Qwen
-    load_balance_strategy: "weighted_random"
+    load_balance_strategy: "least-busy"
     temperature: 0.1
     timeout: 30
 
@@ -52,7 +52,7 @@ pools:
     models: 
       - "siliconflow:Qwen/Qwen3-7B-Instruct"
       - "siliconflow:llama-3.1-8b-instruct"
-    load_balance_strategy: "round_robin"
+    load_balance_strategy: "least-busy"
     temperature: 0.0
     timeout: 10
 
@@ -62,7 +62,7 @@ pools:
     models: 
       - "siliconflow:Qwen/Qwen3-14B-Instruct"
       - "deepseek:deepseek-chat"
-    load_balance_strategy: "weighted_random"
+    load_balance_strategy: "least-busy"
     temperature: 0.1
     timeout: 30
 

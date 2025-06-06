@@ -17,9 +17,16 @@ from src.prompts.prompts import get_prompt
 
 logger = logging.getLogger(__name__)
 
+# 设置最大重试次数
+MAX_TAGGER_RETRY_COUNT = 3
+
 
 def tagger_node(state: ClassifyState, config: RunnableConfig) -> Command:
     logger.info("tagger node start")
+
+    # 初始化retry_count（如果不存在）
+    current_retry_count = state.get("tagger_retry_count", 0)
+
     with Session(db) as session:
         entry_category = (
             session.query(EntryCategory)
@@ -47,20 +54,34 @@ def tagger_node(state: ClassifyState, config: RunnableConfig) -> Command:
             """
         )
     )
-    response = llm.invoke(messages)
-    logger.info(f"tagger node response: \n{response.content}")
 
-    # 解析响应
-    tag_result_data = parse_llm_json_response(response.content)
+    try:
+        response = llm.invoke(messages)
+        logger.info(f"tagger node response: \n{response.content}")
+
+        # 解析响应
+        tag_result_data = parse_llm_json_response(response.content)
+    except Exception:
+        logger.exception("LLM调用失败，分类任务无法完成")
+        # 返回到结束状态，避免无限重试
+        return Command(goto="__end__")
 
     return Command(
-        update={"tag_result": tag_result_data},
+        update={
+            "tag_result": tag_result_data,
+            "tagger_retry_count": current_retry_count,
+        },
         goto="tagger_review",
     )
 
 
 def tagger_review_node(state: ClassifyState) -> Command[Literal["score"]]:
     logger.info("tagger review node start")
+
+    # 获取当前重试次数
+    current_retry_count = state.get("tagger_retry_count", 0)
+    logger.info(f"当前重试次数: {current_retry_count}/{MAX_TAGGER_RETRY_COUNT}")
+
     messages = get_prompt("tagger_review")
     # 使用统一LLM管理器，为tagger_review节点获取专用模型
     llm = unified_llm_manager.get_llm(node_name="tagger_review")
@@ -77,21 +98,41 @@ def tagger_review_node(state: ClassifyState) -> Command[Literal["score"]]:
             """
         )
     )
-    response = llm.invoke(messages)
-    logger.info(f"tagger review node response: \n{response.content}")
 
-    # 解析响应并提取category
-    response_data = parse_llm_json_response(response.content)
+    try:
+        response = llm.invoke(messages)
+        logger.info(f"tagger review node response: \n{response.content}")
+
+        # 解析响应并提取category
+        response_data = parse_llm_json_response(response.content)
+    except Exception:
+        logger.exception("LLM调用失败，审查任务无法完成")
+        # 直接结束流程，避免无限重试
+        return Command(goto="__end__")
+
     approved = response_data["approved"]
 
     if not approved:
-        return Command(
-            update={
-                "tagger_refine_reason": response_data["comment"],
-                "tagger_approved": False,
-            }
-        )
-    category = tag_result["name"]
+        # 检查是否已达到最大重试次数
+        if current_retry_count >= MAX_TAGGER_RETRY_COUNT:
+            logger.warning(
+                f"已达到最大重试次数 {MAX_TAGGER_RETRY_COUNT}，强制使用当前分类结果"
+            )
+            # 强制使用当前分类结果，结束重试循环
+            category = tag_result["name"]
+        else:
+            # 继续重试，增加重试次数
+            logger.info(f"审查未通过，进行第 {current_retry_count + 1} 次重试")
+            return Command(
+                update={
+                    "tagger_refine_reason": response_data["comment"],
+                    "tagger_approved": False,
+                    "tagger_retry_count": current_retry_count + 1,
+                },
+                goto="tagger",
+            )
+    else:
+        category = tag_result["name"]
 
     with Session(db) as session:
         try:
@@ -112,11 +153,13 @@ def tagger_review_node(state: ClassifyState) -> Command[Literal["score"]]:
 
             session.commit()
             logger.info("Successfully saved category")
-        except Exception as e:
+        except Exception:
             logger.exception("tagger node error:")
             session.rollback()
-    if category == "other":
+
+    if category in ["other", "aggregation"]:
         return Command(goto="__end__")
+
     logger.info("Returning command with category")
     return Command(
         update={"category": category},
