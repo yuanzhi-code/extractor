@@ -34,7 +34,7 @@ def get_classification_graph() -> CompiledStateGraph:
                 .first()
             )
             if entry_category and entry_score:
-                return END
+                return "already_processed"
             elif entry_category:
                 return "category_exist"
             else:
@@ -52,7 +52,7 @@ def get_classification_graph() -> CompiledStateGraph:
             return "to_tagger_review"
         else:
             # 如果没有tag_result，说明tagger节点失败，直接结束
-            return END
+            return "tagger_error"
 
     builder.add_node("tagger", tagger_node)
     builder.add_node("tagger_review", tagger_review_node)
@@ -65,7 +65,7 @@ def get_classification_graph() -> CompiledStateGraph:
         {
             "category_exist": "score",
             "start_to_tagger": "tagger",
-            END: END,
+            "already_processed": END,
         },
     )
     builder.add_conditional_edges(
@@ -73,7 +73,7 @@ def get_classification_graph() -> CompiledStateGraph:
         check_tagger_result,
         {
             "to_tagger_review": "tagger_review",
-            END: END,
+            "tagger_error": END,
         },
     )
     builder.add_conditional_edges(
