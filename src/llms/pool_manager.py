@@ -1,4 +1,5 @@
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -19,8 +20,12 @@ litellm_logger.setLevel(logging.WARNING)  # 只显示警告和错误
 router_logger = logging.getLogger("LiteLLM Router")
 router_logger.setLevel(logging.WARNING)
 
-litellm.success_callback = ["langfuse"]
-litellm.failure_callback = ["langfuse"]
+if (
+    os.environ("LANGFUSE_SECRET_KEY") != ""
+    and os.environ("LANGFUSE_PUBLIC_KEY") != ""
+):
+    litellm.success_callback = ["langfuse"]
+    litellm.failure_callback = ["langfuse"]
 
 
 @dataclass

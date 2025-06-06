@@ -12,6 +12,12 @@ class AppConfig(BaseSettings):
     SQLITE_URL: str = Field(
         description="SQLite URL", default="sqlite:///app.db"
     )
+    LANGFUSE_SECRET_KEY: str = Field(
+        description="Langfuse secret key", default=""
+    )
+    LANGFUSE_PUBLIC_KEY: str = Field(
+        description="Langfuse public key", default=""
+    )
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
