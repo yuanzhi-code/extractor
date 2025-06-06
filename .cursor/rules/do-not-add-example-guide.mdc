@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Do not create a usage example docs if I don't ask you to do so
