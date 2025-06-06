@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass, field
+import os
 from typing import Any, Optional
 
 import litellm
@@ -19,6 +20,8 @@ litellm_logger.setLevel(logging.WARNING)  # 只显示警告和错误
 router_logger = logging.getLogger("LiteLLM Router")
 router_logger.setLevel(logging.WARNING)
 
+litellm.success_callback = ["langfuse"]
+litellm.failure_callback = ["langfuse"]
 
 @dataclass
 class PoolConfig:

@@ -23,6 +23,7 @@ dependencies = [
     "langchain-ollama==0.3.3",
     "langchain-openai==0.3.17",
     "langchain-text-splitters==0.3.8",
+    "langfuse==2.60.7",
     "langgraph==0.4.5",
     "langgraph-checkpoint==2.0.26",
     "langgraph-prebuilt==0.1.8",

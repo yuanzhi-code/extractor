@@ -36,15 +36,15 @@ def get_classification_graph() -> CompiledStateGraph:
             if entry_category and entry_score:
                 return END
             elif entry_category:
-                return "to_score"
+                return "category_exist"
             else:
-                return "to_tagger"
+                return "start_to_tagger"
 
     def check_approved(state: ClassifyState) -> str:
         if state.get("tagger_approved"):
-            return "to_score"
+            return "direct_to_score"
         else:
-            return "to_tagger"
+            return "back_to_tagger"
 
     builder.add_node("tagger", tagger_node)
     builder.add_node("tagger_review", tagger_review_node)
@@ -55,8 +55,8 @@ def get_classification_graph() -> CompiledStateGraph:
         START,
         check_tag_and_score_exist,
         {
-            "to_score": "score",
-            "to_tagger": "tagger",
+            "category_exist": END,
+            "start_to_tagger": "tagger",
             END: END,
         },
     )
@@ -65,8 +65,8 @@ def get_classification_graph() -> CompiledStateGraph:
         "tagger_review",
         check_approved,
         {
-            "to_tagger": "tagger",
-            "to_score": "score",
+            "back_to_tagger": "tagger",
+            "direct_to_score": "score",
         },
     )
     builder.add_edge("score", END)
