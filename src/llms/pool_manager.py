@@ -1,6 +1,5 @@
 import logging
 from dataclasses import dataclass, field
-import os
 from typing import Any, Optional
 
 import litellm
@@ -22,6 +21,7 @@ router_logger.setLevel(logging.WARNING)
 
 litellm.success_callback = ["langfuse"]
 litellm.failure_callback = ["langfuse"]
+
 
 @dataclass
 class PoolConfig:
@@ -124,16 +124,16 @@ class ModelPool:
                     "timeout": model.timeout,
                 },
             }
-            
+
             # 添加 tpm/rpm 限制（如果指定）
             if model.tpm is not None:
                 model_config["tpm"] = model.tpm
             if model.rpm is not None:
                 model_config["rpm"] = model.rpm
 
-            # 添加权重（如果支持）
+            # 添加权重（如果支持）, weight 是 litellm router model_list 的顶级参数
             if hasattr(model, "weight") and model.weight > 0:
-                model_config["litellm_params"]["weight"] = model.weight
+                model_config["weight"] = model.weight
 
             model_list.append(model_config)
 
@@ -154,11 +154,13 @@ class ModelPool:
 
         try:
             # 添加调试和日志控制
-            router_settings.update({
-                "set_verbose": False,  # 禁用详细日志
-                "debug_level": "ERROR",  # 只显示错误级别日志
-            })
-            
+            router_settings.update(
+                {
+                    "set_verbose": False,  # 禁用详细日志
+                    "debug_level": "ERROR",  # 只显示错误级别日志
+                }
+            )
+
             self._router = Router(**router_settings)
             logger.info(
                 f"为池 {self.name} 创建 LiteLLM Router，包含 {len(model_list)} 个模型"
@@ -168,15 +170,27 @@ class ModelPool:
             raise
 
     def _convert_strategy(self, strategy: str) -> str:
-        """转换负载均衡策略"""
+        """
+        转换负载均衡策略为 LiteLLM Router 支持的策略。
+
+        支持的策略:
+        - `round_robin`: 轮询 (默认)
+        - `random`: 随机
+        - `weighted_random`: 加权随机 (使用 `simple-shuffle` 和 `weight` 参数)
+        - `weighted_round_robin`: 加权轮询
+        - `latency`: 最低延迟
+        - `least_used`: 最少使用
+        """
         strategy_mapping = {
-            "round_robin": "simple-shuffle",
+            "round_robin": "round-robin",
             "random": "simple-shuffle",
-            "weighted_random": "latency-based-routing",
+            "weighted_random": "simple-shuffle",
+            "weighted_round_robin": "weighted-round-robin",
+            "latency": "latency-based-routing",
             "least_used": "usage-based-routing-v2",
         }
-
-        return strategy_mapping.get(strategy, "simple-shuffle")
+        # 默认使用轮询
+        return strategy_mapping.get(strategy, "round-robin")
 
     def get_model(self) -> LiteLLMRouterWrapper:
         """获取模型实例"""

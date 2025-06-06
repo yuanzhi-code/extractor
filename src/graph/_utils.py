@@ -42,22 +42,22 @@ def parse_llm_json_response(
             cleaned_text = cleaned_text.removeprefix("```json")
             cleaned_text = cleaned_text.removesuffix("```")
             cleaned_text = cleaned_text.strip()
-            
+
             # 处理多个JSON对象的情况，只取第一个
-            if cleaned_text.count('{') > 1:
+            if cleaned_text.count("{") > 1:
                 logger.warning("检测到多个JSON对象，只使用第一个")
                 # 找到第一个完整的JSON对象
                 brace_count = 0
                 first_json_end = -1
                 for i, char in enumerate(cleaned_text):
-                    if char == '{':
+                    if char == "{":
                         brace_count += 1
-                    elif char == '}':
+                    elif char == "}":
                         brace_count -= 1
                         if brace_count == 0:
                             first_json_end = i + 1
                             break
-                
+
                 if first_json_end > 0:
                     cleaned_text = cleaned_text[:first_json_end]
 
