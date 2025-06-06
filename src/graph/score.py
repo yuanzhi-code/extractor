@@ -60,7 +60,7 @@ def score_node(state: ClassifyState):
     # 使用工具函数处理response
     score, summary = extract_scorer_fields(response.content)
 
-        # 验证和清理结果
+    # 验证和清理结果
     valid_tags = ["actionable", "systematic", "noise"]
     if score not in valid_tags:
         logger.warning(f"Invalid score tag: {score}, defaulting to 'noise'")

@@ -68,9 +68,14 @@ def tagger_node(state: ClassifyState, config: RunnableConfig) -> Command:
                 "reason": tag_result_data["classification_rationale"],
             },
         )
+        session.commit()
+
+    if tag_result_data["name"] == "other":
+        return Command(goto="__end__")
+
     return Command(
         update={
-            "tag_result": tag_result_data,
+            "category": tag_result_data["name"],
         },
         goto="score",
     )

@@ -138,7 +138,9 @@ def main():
     if args.graph:
         logger.info("Starting classify...")
         asyncio.run(
-            run_classify_graph(entry_nums=args.entry_nums, ignore_limit=args.ignore_limit)
+            run_classify_graph(
+                entry_nums=args.entry_nums, ignore_limit=args.ignore_limit
+            )
         )
     elif args.crawl:
         logger.info("🕷️ 开始爬虫任务...")
