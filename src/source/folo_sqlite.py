@@ -1,3 +1,4 @@
+import logging
 import os
 import platform
 import shutil
@@ -14,6 +15,8 @@ FOLO_APPLICATION_DARWIN_ASAR = (
     "/Applications/Folo.app/Contents/Resources/app.asar"
 )
 DEFAULT_SQLITE_DB_NAME = "folo.db"
+
+logger = logging.getLogger(__name__)
 
 
 class FoloSQLite:
@@ -76,8 +79,8 @@ class FoloSQLite:
 
         engine = Engine()
         self.sqlite_module = Module(engine, wasm_bytes)
-        print(f"Successfully loaded WASM module from {wasm_file_path}")
-        print(f"WASM module size: {len(wasm_bytes)} bytes")
+        logger.info(f"Successfully loaded WASM module from {wasm_file_path}")
+        logger.info(f"WASM module size: {len(wasm_bytes)} bytes")
         return self.sqlite_module
 
     def export_database(
@@ -107,7 +110,7 @@ class FoloSQLite:
         # 这里需要实现实际的数据库导出逻辑
         # 由于WASM模块需要特定的JavaScript环境和导入函数，
         # 我们先创建一个示例数据库文件作为占位符
-        print(f"Exporting database to: {output_file}")
+        logger.info(f"Exporting database to: {output_file}")
 
         # 创建一个示例SQLite数据库
         conn = sqlite3.connect(output_file)
@@ -134,14 +137,14 @@ class FoloSQLite:
         conn.commit()
         conn.close()
 
-        print(f"Database exported successfully to: {output_file}")
+        logger.info(f"Database exported successfully to: {output_file}")
         return output_file
 
     def cleanup(self):
         """清理临时目录"""
         if self.temp_dir and os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
-            print(f"Cleaned up temporary directory: {self.temp_dir}")
+            logger.info(f"Cleaned up temporary directory: {self.temp_dir}")
             self.temp_dir = None
             self.wasm_file_path = None
 
@@ -174,13 +177,13 @@ def main():
         output_file = folo_sqlite.export_database(
             db_name=args.db_name, output_path=args.output
         )
-        print(f"Export completed: {output_file}")
+        logger.info(f"Export completed: {output_file}")
 
         if args.cleanup:
             folo_sqlite.cleanup()
 
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         return 1
 
     return 0
