@@ -21,6 +21,10 @@ class AppConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
+    folo_source: bool = Field(
+        description="whether to enable read contents from folo sqlite",
+        default=False,
+    )
     # def __init__(self, proxy: Optional[str] = None):
     #     """
     #     初始化 FeedConfig
